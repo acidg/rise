@@ -19,8 +19,9 @@ class TemperatureShift {
   /// Highest of the six low measurements before the rise (the coverline).
   final double coverline;
 
-  /// Lowest of the higher measurements that confirm the shift (three, or four
-  /// under the fourth-day exception).
+  /// Lowest of the higher measurements that confirm the shift - the three (or
+  /// four, under the exception) measurements above the coverline that close the
+  /// fertile window. The upper reference line rests on this point.
   final double lowestHigherTemperature;
 
   const TemperatureShift({
@@ -61,13 +62,15 @@ TemperatureShift? detectTemperatureShift(List<double?> temperatures) {
       continue;
     }
 
-    final lowestHigher = min(first, min(second, third));
+    // The upper reference line rests on the lowest of the higher measurements
+    // that actually confirm the shift - three in the normal case, four under
+    // the exception - and never on a later day outside the confirming set.
     if (third >= coverline + kShiftMinimumRise) {
       return TemperatureShift(
         ovulationDay: i,
         confirmationDay: i + 3,
         coverline: coverline,
-        lowestHigherTemperature: lowestHigher,
+        lowestHigherTemperature: [first, second, third].reduce(min),
       );
     }
 
@@ -77,9 +80,7 @@ TemperatureShift? detectTemperatureShift(List<double?> temperatures) {
         ovulationDay: i,
         confirmationDay: i + 4,
         coverline: coverline,
-        // The fourth measurement is part of the confirming higher measurements,
-        // so it counts when finding the lowest of them.
-        lowestHigherTemperature: min(lowestHigher, fourth),
+        lowestHigherTemperature: [first, second, third, fourth].reduce(min),
       );
     }
   }

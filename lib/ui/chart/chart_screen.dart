@@ -121,7 +121,11 @@ class _ChartScreenState extends State<ChartScreen> {
                   .clamp(_minGraphHeight, double.infinity)
                   .toDouble();
 
-              return Row(
+              // When the viewport is too short for the graph plus the table (a
+              // short landscape window), the whole chart scrolls vertically
+              // rather than overflowing; the gutter scrolls with it so its
+              // labels stay aligned.
+              final content = Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _gutter(graphHeight, muted),
@@ -153,6 +157,7 @@ class _ChartScreenState extends State<ChartScreen> {
                                   colors: chartColors,
                                   onSurface: onSurface,
                                   muted: muted,
+                                  separator: theme.dividerColor,
                                 ),
                               ),
                               CustomPaint(
@@ -173,6 +178,11 @@ class _ChartScreenState extends State<ChartScreen> {
                   ),
                 ],
               );
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: SizedBox(height: graphHeight + tableHeight, child: content),
+              );
             },
           );
         },
@@ -186,11 +196,27 @@ class _ChartScreenState extends State<ChartScreen> {
       color: muted,
       fontWeight: FontWeight.w600,
     );
+    final tempLabelStyle = TextStyle(fontSize: 10, color: muted);
     return SizedBox(
       width: _gutterWidth,
       child: Column(
         children: [
-          SizedBox(height: graphHeight),
+          SizedBox(
+            height: graphHeight,
+            child: Stack(
+              children: [
+                for (final temperature in kChartGridTemperatures)
+                  Positioned(
+                    right: 8,
+                    top: chartTempToY(temperature, graphHeight) - 7,
+                    child: Text(
+                      temperature.toStringAsFixed(1),
+                      style: tempLabelStyle,
+                    ),
+                  ),
+              ],
+            ),
+          ),
           for (final label in kAttrRowLabels)
             SizedBox(
               height: kAttrRowHeight,

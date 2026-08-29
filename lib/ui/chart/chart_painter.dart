@@ -9,8 +9,37 @@ const double kColumnWidth = 44;
 
 const double _tempMin = 36.0;
 const double _tempMax = 37.3;
-const double _headerHeight = 46;
-const double _plotBottomPad = 8;
+
+/// Height reserved above the plot for the per-day header (date, cycle day).
+const double kChartHeaderHeight = 46;
+
+/// Padding below the lowest plotted temperature.
+const double kChartBottomPad = 8;
+
+/// Major temperature grid lines in degrees Celsius, from 36.0 to 37.2 C every
+/// 0.2 C, warmest first. Shared by the graph (which draws them) and the axis
+/// gutter (which labels every one).
+const List<double> kChartGridTemperatures = [
+  37.2,
+  37.0,
+  36.8,
+  36.6,
+  36.4,
+  36.2,
+  36.0,
+];
+
+/// Y coordinate for [temperature] within a plot [plotHeight] pixels tall, using
+/// the same scale as the graph. Lets the axis gutter align its labels with the
+/// grid lines the painter draws.
+double chartTempToY(double temperature, double plotHeight) =>
+    _scaleTempToY(temperature, kChartHeaderHeight, plotHeight - kChartBottomPad);
+
+double _scaleTempToY(double temperature, double top, double bottom) {
+  final clamped = temperature.clamp(_tempMin, _tempMax);
+  final fraction = (clamped - _tempMin) / (_tempMax - _tempMin);
+  return bottom - fraction * (bottom - top);
+}
 
 const List<String> _monthAbbr = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
@@ -26,24 +55,28 @@ class GraphPainter extends CustomPainter {
   final ChartColors colors;
   final Color onSurface;
   final Color muted;
+  final Color separator;
 
   GraphPainter({
     required this.days,
     required this.colors,
     required this.onSurface,
     required this.muted,
+    required this.separator,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final plotTop = _headerHeight;
-    final plotBottom = size.height - _plotBottomPad;
+    final plotTop = kChartHeaderHeight;
+    final plotBottom = size.height - kChartBottomPad;
     if (plotBottom <= plotTop) {
       return;
     }
 
     _paintZebra(canvas, size);
     _paintFertileBands(canvas, plotTop, plotBottom);
+    _paintGridlines(canvas, size.width, plotTop, plotBottom);
+    _paintCycleSeparators(canvas, plotTop, size.height);
     _paintReferenceLines(canvas, plotTop, plotBottom);
     _paintOvulation(canvas, plotTop, plotBottom);
     _paintTemperature(canvas, plotTop, plotBottom);
@@ -53,10 +86,35 @@ class GraphPainter extends CustomPainter {
 
   double _centerX(int index) => index * kColumnWidth + kColumnWidth / 2;
 
-  double _tempY(double temperature, double top, double bottom) {
-    final clamped = temperature.clamp(_tempMin, _tempMax);
-    final fraction = (clamped - _tempMin) / (_tempMax - _tempMin);
-    return bottom - fraction * (bottom - top);
+  double _tempY(double temperature, double top, double bottom) =>
+      _scaleTempToY(temperature, top, bottom);
+
+  /// Faint horizontal grid lines at the major temperature values, drawn over the
+  /// fertile band so the scale stays readable across the whole plot.
+  void _paintGridlines(Canvas canvas, double width, double top, double bottom) {
+    final paint = Paint()
+      ..color = colors.axis
+      ..strokeWidth = 1;
+    for (final temperature in kChartGridTemperatures) {
+      final y = _tempY(temperature, top, bottom);
+      canvas.drawLine(Offset(0, y), Offset(width, y), paint);
+    }
+  }
+
+  /// Vertical separator at the left edge of each cycle's first day, marking
+  /// where a new cycle begins. It runs from the plot top through to the bottom
+  /// and is continued across the attribute table below.
+  void _paintCycleSeparators(Canvas canvas, double top, double bottom) {
+    final paint = Paint()
+      ..color = separator
+      ..strokeWidth = 1;
+    for (var i = 0; i < days.length; i++) {
+      if (days[i].cycleDay != 1) {
+        continue;
+      }
+      final x = i * kColumnWidth;
+      canvas.drawLine(Offset(x, top), Offset(x, bottom), paint);
+    }
   }
 
   /// Subtle alternating column tint (zebra) to make columns easier to follow.
@@ -101,7 +159,7 @@ class GraphPainter extends CustomPainter {
       ..strokeWidth = 1;
     canvas.save();
     canvas.clipRect(rect);
-    const gap = 7.0;
+    const gap = 13.0;
     final height = rect.height;
     for (var x = rect.left - height; x < rect.right; x += gap) {
       canvas.drawLine(
@@ -152,11 +210,12 @@ class GraphPainter extends CustomPainter {
       _text(
         canvas,
         '+${diff.toStringAsFixed(2)}',
-        (left + right) / 2,
+        left + 2,
         lowY - 14,
         colors.lowHigh,
         10,
         bold: true,
+        leftAlign: true,
       );
       i = j + 1;
     }
@@ -187,9 +246,12 @@ class GraphPainter extends CustomPainter {
       ..strokeWidth = 2.4
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    final dotPaint = Paint()..color = colors.temperature;
-    final centerPaint = Paint()..color = Colors.white;
+    final fillPaint = Paint()..color = Colors.white;
 
+    // Collect the plotted points and draw the connecting line first, so the
+    // dots sit cleanly on top of it rather than being clipped by later segments.
+    final points = <Offset>[];
+    final todayFlags = <bool>[];
     Offset? previous;
     for (var i = 0; i < days.length; i++) {
       final temperature = days[i].temperature;
@@ -201,9 +263,22 @@ class GraphPainter extends CustomPainter {
       if (previous != null) {
         canvas.drawLine(previous, point, linePaint);
       }
-      canvas.drawCircle(point, 4, dotPaint);
-      canvas.drawCircle(point, 1.7, centerPaint);
+      points.add(point);
+      todayFlags.add(days[i].isToday);
       previous = point;
+    }
+
+    // A white-filled dot with a coloured ring reads clearly against the line;
+    // today's dot is drawn larger so it stands out.
+    for (var i = 0; i < points.length; i++) {
+      final isToday = todayFlags[i];
+      final radius = isToday ? 6.5 : 5.0;
+      final ringPaint = Paint()
+        ..color = colors.temperature
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isToday ? 3.0 : 2.2;
+      canvas.drawCircle(points[i], radius, fillPaint);
+      canvas.drawCircle(points[i], radius, ringPaint);
     }
   }
 
@@ -315,11 +390,12 @@ class GraphPainter extends CustomPainter {
   void _text(
     Canvas canvas,
     String value,
-    double centerX,
+    double x,
     double top,
     Color color,
     double size, {
     bool bold = false,
+    bool leftAlign = false,
   }) {
     final painter = TextPainter(
       text: TextSpan(
@@ -332,7 +408,8 @@ class GraphPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    painter.paint(canvas, Offset(centerX - painter.width / 2, top));
+    final dx = leftAlign ? x : x - painter.width / 2;
+    painter.paint(canvas, Offset(dx, top));
   }
 
   @override

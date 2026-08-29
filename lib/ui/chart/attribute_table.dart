@@ -89,6 +89,14 @@ class AttributeTablePainter extends CustomPainter {
       final y = row * kAttrRowHeight;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), separatorPaint);
     }
+    // Continue each cycle-start separator from the graph down through the table.
+    for (var i = 0; i < days.length; i++) {
+      if (days[i].cycleDay != 1) {
+        continue;
+      }
+      final x = i * kColumnWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), separatorPaint);
+    }
 
     for (var i = 0; i < days.length; i++) {
       if (days[i].isFuture) {

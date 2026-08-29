@@ -61,14 +61,12 @@ class AppController extends ChangeNotifier {
       for (var i = 0; i < days.length; i++) {
         final cycleDay = i + 1;
         // The reference lines start at the six low measurements (ovulation day
-        // minus five) and extend across the shift and the rest of the fertile
-        // window, so the coverline reads as a baseline the higher measurements
-        // clear.
-        final refEnd = max(window.lastFertileDay, window.ovulationDay + 5);
+        // minus five) and run to the end of the fertile window, where the
+        // temperature shift closes it. They must not spread past the window.
         final onShiftBand =
             window.confirmed &&
             cycleDay >= window.ovulationDay - 5 &&
-            cycleDay <= refEnd;
+            cycleDay <= window.lastFertileDay;
         result.add(
           ChartDay(
             entry: days[i],
