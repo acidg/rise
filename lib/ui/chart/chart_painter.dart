@@ -167,11 +167,17 @@ class GraphPainter extends CustomPainter {
       ..color = colors.ovulation
       ..strokeWidth = 2;
     for (var i = 0; i < days.length; i++) {
-      if (!days[i].isOvulation) {
+      final day = days[i];
+      if (!day.isOvulation) {
         continue;
       }
       final x = _centerX(i);
-      _dashedLine(canvas, Offset(x, top), Offset(x, bottom), paint);
+      // Confirmed (past) ovulation is a solid line; a predicted one is dashed.
+      if (day.confirmed) {
+        canvas.drawLine(Offset(x, top), Offset(x, bottom), paint);
+      } else {
+        _dashedLine(canvas, Offset(x, top), Offset(x, bottom), paint);
+      }
     }
   }
 
