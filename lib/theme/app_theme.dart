@@ -21,6 +21,9 @@ class ChartColors extends ThemeExtension<ChartColors> {
   final Color hatchBg;
   final Color hatchLine;
 
+  /// Translucent tint highlighting today's column.
+  final Color todayTint;
+
   const ChartColors({
     required this.temperature,
     required this.fertileFill,
@@ -34,6 +37,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
     required this.columnAlt,
     required this.hatchBg,
     required this.hatchLine,
+    required this.todayTint,
   });
 
   @override
@@ -50,6 +54,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
     Color? columnAlt,
     Color? hatchBg,
     Color? hatchLine,
+    Color? todayTint,
   }) {
     return ChartColors(
       temperature: temperature ?? this.temperature,
@@ -64,6 +69,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
       columnAlt: columnAlt ?? this.columnAlt,
       hatchBg: hatchBg ?? this.hatchBg,
       hatchLine: hatchLine ?? this.hatchLine,
+      todayTint: todayTint ?? this.todayTint,
     );
   }
 
@@ -85,6 +91,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
       columnAlt: Color.lerp(columnAlt, other.columnAlt, t)!,
       hatchBg: Color.lerp(hatchBg, other.hatchBg, t)!,
       hatchLine: Color.lerp(hatchLine, other.hatchLine, t)!,
+      todayTint: Color.lerp(todayTint, other.todayTint, t)!,
     );
   }
 }
@@ -104,6 +111,7 @@ const ChartColors _lightChart = ChartColors(
   columnAlt: Color(0x08000000),
   hatchBg: Color(0xFFEEF9F5),
   hatchLine: Color(0xFF8FDCC9),
+  todayTint: Color(0x143A7AFE),
 );
 
 const ChartColors _darkChart = ChartColors(
@@ -119,6 +127,7 @@ const ChartColors _darkChart = ChartColors(
   columnAlt: Color(0x0DFFFFFF),
   hatchBg: Color(0xFF12241F),
   hatchLine: Color(0xFF2F6B5E),
+  todayTint: Color(0x265A90FF),
 );
 
 /// Light theme for Rise.

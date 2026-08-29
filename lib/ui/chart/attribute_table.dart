@@ -73,6 +73,14 @@ class AttributeTablePainter extends CustomPainter {
       );
     }
 
+    final todayIndex = days.indexWhere((d) => d.isToday);
+    if (todayIndex >= 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(todayIndex * kColumnWidth, 0, kColumnWidth, size.height),
+        Paint()..color = colors.todayTint,
+      );
+    }
+
     final separatorPaint = Paint()
       ..color = separator
       ..strokeWidth = 1;

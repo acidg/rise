@@ -47,6 +47,7 @@ class GraphPainter extends CustomPainter {
     _paintReferenceLines(canvas, plotTop, plotBottom);
     _paintOvulation(canvas, plotTop, plotBottom);
     _paintTemperature(canvas, plotTop, plotBottom);
+    _paintTodayTint(canvas, size);
     _paintHeaders(canvas);
   }
 
@@ -138,8 +139,8 @@ class GraphPainter extends CustomPainter {
       }
       final coverY = _tempY(cover, top, bottom);
       final lowY = _tempY(low, top, bottom);
-      final left = _centerX(i);
-      final right = _centerX(j);
+      final left = i * kColumnWidth;
+      final right = (j + 1) * kColumnWidth;
       _dashedLine(
         canvas,
         Offset(left, coverY),
@@ -181,6 +182,7 @@ class GraphPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     final dotPaint = Paint()..color = colors.temperature;
+    final centerPaint = Paint()..color = Colors.white;
 
     Offset? previous;
     for (var i = 0; i < days.length; i++) {
@@ -193,12 +195,26 @@ class GraphPainter extends CustomPainter {
       if (previous != null) {
         canvas.drawLine(previous, point, linePaint);
       }
-      canvas.drawCircle(point, 3, dotPaint);
+      canvas.drawCircle(point, 4, dotPaint);
+      canvas.drawCircle(point, 1.7, centerPaint);
       previous = point;
     }
   }
 
+  /// Translucent tint over today's column, so today stands out.
+  void _paintTodayTint(Canvas canvas, Size size) {
+    final index = days.indexWhere((d) => d.isToday);
+    if (index < 0) {
+      return;
+    }
+    canvas.drawRect(
+      Rect.fromLTWH(index * kColumnWidth, 0, kColumnWidth, size.height),
+      Paint()..color = colors.todayTint,
+    );
+  }
+
   void _paintHeaders(Canvas canvas) {
+    const cycleDayY = 27.0;
     for (var i = 0; i < days.length; i++) {
       final day = days[i];
       final centerX = _centerX(i);
@@ -210,15 +226,67 @@ class GraphPainter extends CustomPainter {
         muted,
         9,
       );
-      _text(canvas, '${day.cycleDay}', centerX, 20, onSurface, 13, bold: true);
+      if (day.isToday) {
+        // Today's cycle day sits in a filled pill so it stands out.
+        final label = _layout(
+          '${day.cycleDay}',
+          13,
+          bold: true,
+          color: Colors.white,
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: Offset(centerX, cycleDayY),
+              width: label.width + 14,
+              height: 20,
+            ),
+            const Radius.circular(10),
+          ),
+          Paint()..color = colors.temperature,
+        );
+        label.paint(
+          canvas,
+          Offset(centerX - label.width / 2, cycleDayY - label.height / 2),
+        );
+      } else {
+        _text(
+          canvas,
+          '${day.cycleDay}',
+          centerX,
+          20,
+          onSurface,
+          13,
+          bold: true,
+        );
+      }
       if (day.hasEntry) {
         canvas.drawCircle(
-          Offset(centerX, 40),
+          Offset(centerX, 41),
           2,
           Paint()..color = colors.entryDot,
         );
       }
     }
+  }
+
+  TextPainter _layout(
+    String value,
+    double size, {
+    bool bold = false,
+    Color color = const Color(0xFF000000),
+  }) {
+    return TextPainter(
+      text: TextSpan(
+        text: value,
+        style: TextStyle(
+          color: color,
+          fontSize: size,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
   }
 
   void _dashedLine(Canvas canvas, Offset from, Offset to, Paint paint) {
