@@ -55,6 +55,13 @@ class AppController extends ChangeNotifier {
       final days = analyzed.cycle.days;
       for (var i = 0; i < days.length; i++) {
         final cycleDay = i + 1;
+        // The reference lines sit on the shift band: the six low measurements
+        // (ovulation day minus five through ovulation) and the three higher ones
+        // that confirm it (through ovulation day plus three).
+        final onShiftBand =
+            window.confirmed &&
+            cycleDay >= window.ovulationDay - 5 &&
+            cycleDay <= window.ovulationDay + 3;
         result.add(
           ChartDay(
             entry: days[i],
@@ -62,7 +69,10 @@ class AppController extends ChangeNotifier {
             fertile: window.isFertile(cycleDay),
             isOvulation: cycleDay == window.ovulationDay,
             confirmed: window.confirmed,
-            coverline: window.coverline,
+            coverline: onShiftBand ? window.coverline : null,
+            lowestHigherTemperature: onShiftBand
+                ? window.lowestHigherTemperature
+                : null,
           ),
         );
       }

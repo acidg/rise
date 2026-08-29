@@ -38,6 +38,10 @@ class _ChartScreenState extends State<ChartScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       builder: (_) =>
           DayDetailSheet(entry: day.entry, onSave: widget.controller.saveEntry),
     );

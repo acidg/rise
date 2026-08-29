@@ -11,8 +11,13 @@ class ChartDay {
   /// Whether ovulation is confirmed for this day's cycle.
   final bool confirmed;
 
-  /// Coverline temperature for this day's cycle, or null when not confirmed.
+  /// Coverline (highest of the six low measurements) for this day, present only
+  /// on the shift band of a confirmed cycle.
   final double? coverline;
+
+  /// Lowest of the three higher measurements for this day, present only on the
+  /// shift band of a confirmed cycle. Drawn as the upper reference line.
+  final double? lowestHigherTemperature;
 
   const ChartDay({
     required this.entry,
@@ -21,6 +26,7 @@ class ChartDay {
     required this.isOvulation,
     required this.confirmed,
     required this.coverline,
+    required this.lowestHigherTemperature,
   });
 
   DateTime get date => entry.date;

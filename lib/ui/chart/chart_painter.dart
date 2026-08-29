@@ -43,7 +43,7 @@ class GraphPainter extends CustomPainter {
     }
 
     _paintFertileBands(canvas, plotTop, plotBottom);
-    _paintCoverline(canvas, plotTop, plotBottom);
+    _paintReferenceLines(canvas, plotTop, plotBottom);
     _paintOvulation(canvas, plotTop, plotBottom);
     _paintTemperature(canvas, plotTop, plotBottom);
     _paintHeaders(canvas);
@@ -70,27 +70,50 @@ class GraphPainter extends CustomPainter {
     }
   }
 
-  void _paintCoverline(Canvas canvas, double top, double bottom) {
-    final paint = Paint()
+  /// Draws, per shift band, the coverline (highest of the six lows) and the
+  /// upper line for the lowest of the three higher measurements, with the
+  /// difference between them labelled.
+  void _paintReferenceLines(Canvas canvas, double top, double bottom) {
+    final coverPaint = Paint()
       ..color = colors.coverline
+      ..strokeWidth = 1.5;
+    final lowPaint = Paint()
+      ..color = colors.lowHigh
       ..strokeWidth = 1.5;
     var i = 0;
     while (i < days.length) {
       final cover = days[i].coverline;
-      if (cover == null) {
+      final low = days[i].lowestHigherTemperature;
+      if (cover == null || low == null) {
         i++;
         continue;
       }
       var j = i;
-      while (j + 1 < days.length && days[j + 1].coverline == cover) {
+      while (j + 1 < days.length &&
+          days[j + 1].coverline == cover &&
+          days[j + 1].lowestHigherTemperature == low) {
         j++;
       }
-      final y = _tempY(cover, top, bottom);
+      final coverY = _tempY(cover, top, bottom);
+      final lowY = _tempY(low, top, bottom);
+      final left = _centerX(i);
+      final right = _centerX(j);
       _dashedLine(
         canvas,
-        Offset(_centerX(i), y),
-        Offset(_centerX(j), y),
-        paint,
+        Offset(left, coverY),
+        Offset(right, coverY),
+        coverPaint,
+      );
+      _dashedLine(canvas, Offset(left, lowY), Offset(right, lowY), lowPaint);
+      final diff = low - cover;
+      _text(
+        canvas,
+        '+${diff.toStringAsFixed(2)}',
+        (left + right) / 2,
+        lowY - 14,
+        colors.lowHigh,
+        10,
+        bold: true,
       );
       i = j + 1;
     }

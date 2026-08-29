@@ -8,6 +8,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
   final Color fertileFill;
   final Color ovulation;
   final Color coverline;
+  final Color lowHigh;
   final Color period;
   final Color mucus;
   final Color axis;
@@ -18,6 +19,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
     required this.fertileFill,
     required this.ovulation,
     required this.coverline,
+    required this.lowHigh,
     required this.period,
     required this.mucus,
     required this.axis,
@@ -30,6 +32,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
     Color? fertileFill,
     Color? ovulation,
     Color? coverline,
+    Color? lowHigh,
     Color? period,
     Color? mucus,
     Color? axis,
@@ -40,6 +43,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
       fertileFill: fertileFill ?? this.fertileFill,
       ovulation: ovulation ?? this.ovulation,
       coverline: coverline ?? this.coverline,
+      lowHigh: lowHigh ?? this.lowHigh,
       period: period ?? this.period,
       mucus: mucus ?? this.mucus,
       axis: axis ?? this.axis,
@@ -57,6 +61,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
       fertileFill: Color.lerp(fertileFill, other.fertileFill, t)!,
       ovulation: Color.lerp(ovulation, other.ovulation, t)!,
       coverline: Color.lerp(coverline, other.coverline, t)!,
+      lowHigh: Color.lerp(lowHigh, other.lowHigh, t)!,
       period: Color.lerp(period, other.period, t)!,
       mucus: Color.lerp(mucus, other.mucus, t)!,
       axis: Color.lerp(axis, other.axis, t)!,
@@ -72,6 +77,7 @@ const ChartColors _lightChart = ChartColors(
   fertileFill: Color(0xFFD7F2EA),
   ovulation: Color(0xFF7A5CFF),
   coverline: Color(0xFFC56B2C),
+  lowHigh: Color(0xFF2F8F6B),
   period: _brandPink,
   mucus: Color(0xFF37C2A8),
   axis: Color(0xFFB6BDC8),
@@ -83,6 +89,7 @@ const ChartColors _darkChart = ChartColors(
   fertileFill: Color(0xFF14342D),
   ovulation: Color(0xFF9C86FF),
   coverline: Color(0xFFE0955A),
+  lowHigh: Color(0xFF59C79D),
   period: _brandPink,
   mucus: Color(0xFF4FD1B5),
   axis: Color(0xFF5A6675),
