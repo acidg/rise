@@ -19,6 +19,12 @@ class ChartDay {
   /// shift band of a confirmed cycle. Drawn as the upper reference line.
   final double? lowestHigherTemperature;
 
+  /// A predicted day past today, with no logged data. Not tappable.
+  final bool isFuture;
+
+  /// The most recent recorded day of the current cycle.
+  final bool isToday;
+
   const ChartDay({
     required this.entry,
     required this.cycleDay,
@@ -27,6 +33,8 @@ class ChartDay {
     required this.confirmed,
     required this.coverline,
     required this.lowestHigherTemperature,
+    this.isFuture = false,
+    this.isToday = false,
   });
 
   DateTime get date => entry.date;

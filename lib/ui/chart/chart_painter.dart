@@ -70,16 +70,46 @@ class GraphPainter extends CustomPainter {
   }
 
   void _paintFertileBands(Canvas canvas, double top, double bottom) {
-    final paint = Paint()..color = colors.fertileFill;
+    final solid = Paint()..color = colors.fertileFill;
     for (var i = 0; i < days.length; i++) {
-      if (!days[i].fertile) {
+      final day = days[i];
+      if (!day.fertile) {
         continue;
       }
-      canvas.drawRect(
-        Rect.fromLTRB(i * kColumnWidth, top, (i + 1) * kColumnWidth, bottom),
-        paint,
+      final rect = Rect.fromLTRB(
+        i * kColumnWidth,
+        top,
+        (i + 1) * kColumnWidth,
+        bottom,
+      );
+      // Confirmed cycles show a solid window; an unconfirmed cycle's window is a
+      // prediction, drawn hatched.
+      if (day.confirmed) {
+        canvas.drawRect(rect, solid);
+      } else {
+        _paintHatch(canvas, rect);
+      }
+    }
+  }
+
+  /// Diagonal hatch fill for a predicted (unconfirmed) fertile day.
+  void _paintHatch(Canvas canvas, Rect rect) {
+    canvas.drawRect(rect, Paint()..color = colors.hatchBg);
+    final linePaint = Paint()
+      ..color = colors.hatchLine
+      ..strokeWidth = 1;
+    canvas.save();
+    canvas.clipRect(rect);
+    const gap = 7.0;
+    final height = rect.height;
+    for (var x = rect.left - height; x < rect.right; x += gap) {
+      canvas.drawLine(
+        Offset(x, rect.bottom),
+        Offset(x + height, rect.top),
+        linePaint,
       );
     }
+    canvas.restore();
   }
 
   /// Draws, per shift band, the coverline (highest of the six lows) and the

@@ -83,6 +83,9 @@ class AttributeTablePainter extends CustomPainter {
     }
 
     for (var i = 0; i < days.length; i++) {
+      if (days[i].isFuture) {
+        continue; // predicted days carry no logged values
+      }
       final entry = days[i].entry;
       final cx = _centerX(i);
       _temperature(canvas, entry, cx, _rowCenter(0));

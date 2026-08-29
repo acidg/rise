@@ -17,6 +17,10 @@ class ChartColors extends ThemeExtension<ChartColors> {
   /// Translucent overlay tint for every other day column (zebra striping).
   final Color columnAlt;
 
+  /// Background and line colours for the hatched (predicted) fertile window.
+  final Color hatchBg;
+  final Color hatchLine;
+
   const ChartColors({
     required this.temperature,
     required this.fertileFill,
@@ -28,6 +32,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
     required this.axis,
     required this.entryDot,
     required this.columnAlt,
+    required this.hatchBg,
+    required this.hatchLine,
   });
 
   @override
@@ -42,6 +48,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
     Color? axis,
     Color? entryDot,
     Color? columnAlt,
+    Color? hatchBg,
+    Color? hatchLine,
   }) {
     return ChartColors(
       temperature: temperature ?? this.temperature,
@@ -54,6 +62,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
       axis: axis ?? this.axis,
       entryDot: entryDot ?? this.entryDot,
       columnAlt: columnAlt ?? this.columnAlt,
+      hatchBg: hatchBg ?? this.hatchBg,
+      hatchLine: hatchLine ?? this.hatchLine,
     );
   }
 
@@ -73,6 +83,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
       axis: Color.lerp(axis, other.axis, t)!,
       entryDot: Color.lerp(entryDot, other.entryDot, t)!,
       columnAlt: Color.lerp(columnAlt, other.columnAlt, t)!,
+      hatchBg: Color.lerp(hatchBg, other.hatchBg, t)!,
+      hatchLine: Color.lerp(hatchLine, other.hatchLine, t)!,
     );
   }
 }
@@ -90,6 +102,8 @@ const ChartColors _lightChart = ChartColors(
   axis: Color(0xFFB6BDC8),
   entryDot: _brandPink,
   columnAlt: Color(0x08000000),
+  hatchBg: Color(0xFFEEF9F5),
+  hatchLine: Color(0xFF8FDCC9),
 );
 
 const ChartColors _darkChart = ChartColors(
@@ -103,6 +117,8 @@ const ChartColors _darkChart = ChartColors(
   axis: Color(0xFF5A6675),
   entryDot: Color(0xFFFF8AB8),
   columnAlt: Color(0x0DFFFFFF),
+  hatchBg: Color(0xFF12241F),
+  hatchLine: Color(0xFF2F6B5E),
 );
 
 /// Light theme for Rise.

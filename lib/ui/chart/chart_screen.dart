@@ -13,8 +13,9 @@ const double _minGraphHeight = 160;
 
 /// The primary screen: a horizontally scrolling chart of temperature with an
 /// attribute table of the other daily signs below it, sharing one horizontal
-/// scroll. A frozen left gutter labels the table rows. Tapping a day opens its
-/// editable detail sheet.
+/// scroll. A frozen left gutter labels the table rows. The view starts centred
+/// on today, with the predicted days ahead to the right. Tapping a recorded day
+/// opens its editable detail sheet.
 class ChartScreen extends StatefulWidget {
   final AppController controller;
 
@@ -25,12 +26,21 @@ class ChartScreen extends StatefulWidget {
 }
 
 class _ChartScreenState extends State<ChartScreen> {
+  final ScrollController _scroll = ScrollController();
+  bool _centered = false;
+
   @override
   void initState() {
     super.initState();
     if (!widget.controller.isLoaded) {
       widget.controller.load();
     }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
   void _openDetail(ChartDay day) {
@@ -45,6 +55,29 @@ class _ChartScreenState extends State<ChartScreen> {
       builder: (_) =>
           DayDetailSheet(entry: day.entry, onSave: widget.controller.saveEntry),
     );
+  }
+
+  /// Centre the view on today once, after the first layout.
+  void _centerOnToday(List<ChartDay> days) {
+    if (_centered || days.isEmpty) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_centered || !_scroll.hasClients) {
+        return;
+      }
+      var index = days.indexWhere((d) => d.isToday);
+      if (index < 0) {
+        index = days.length - 1;
+      }
+      final todayX = index * kColumnWidth + kColumnWidth / 2;
+      final target = (todayX - _scroll.position.viewportDimension / 2).clamp(
+        0.0,
+        _scroll.position.maxScrollExtent,
+      );
+      _scroll.jumpTo(target);
+      _centered = true;
+    });
   }
 
   @override
@@ -78,10 +111,12 @@ class _ChartScreenState extends State<ChartScreen> {
           if (days.isEmpty) {
             return const Center(child: Text('No measurements yet'));
           }
+          _centerOnToday(days);
+          final totalWidth = days.length * kColumnWidth;
+          final tableHeight = attrTableHeight();
+
           return LayoutBuilder(
             builder: (context, constraints) {
-              final totalWidth = days.length * kColumnWidth;
-              final tableHeight = attrTableHeight();
               final graphHeight = (constraints.maxHeight - tableHeight)
                   .clamp(_minGraphHeight, double.infinity)
                   .toDouble();
@@ -92,15 +127,17 @@ class _ChartScreenState extends State<ChartScreen> {
                   _gutter(graphHeight, muted),
                   Expanded(
                     child: SingleChildScrollView(
+                      controller: _scroll,
                       scrollDirection: Axis.horizontal,
-                      reverse: true, // start at the most recent day
                       child: GestureDetector(
                         key: const Key('chart'),
                         behavior: HitTestBehavior.opaque,
                         onTapUp: (details) {
                           final index =
                               (details.localPosition.dx / kColumnWidth).floor();
-                          if (index >= 0 && index < days.length) {
+                          if (index >= 0 &&
+                              index < days.length &&
+                              !days[index].isFuture) {
                             _openDetail(days[index]);
                           }
                         },
