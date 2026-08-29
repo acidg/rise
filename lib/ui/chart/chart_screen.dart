@@ -115,75 +115,84 @@ class _ChartScreenState extends State<ChartScreen> {
           final totalWidth = days.length * kColumnWidth;
           final tableHeight = attrTableHeight();
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final graphHeight = (constraints.maxHeight - tableHeight)
-                  .clamp(_minGraphHeight, double.infinity)
-                  .toDouble();
+          // Keep the chart clear of the system bars (notably the bottom
+          // navigation bar); the AppBar already covers the top inset.
+          return SafeArea(
+            top: false,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final graphHeight = (constraints.maxHeight - tableHeight)
+                    .clamp(_minGraphHeight, double.infinity)
+                    .toDouble();
 
-              // When the viewport is too short for the graph plus the table (a
-              // short landscape window), the whole chart scrolls vertically
-              // rather than overflowing; the gutter scrolls with it so its
-              // labels stay aligned.
-              final content = Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _gutter(graphHeight, muted),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _scroll,
-                      scrollDirection: Axis.horizontal,
-                      child: GestureDetector(
-                        key: const Key('chart'),
-                        behavior: HitTestBehavior.opaque,
-                        onTapUp: (details) {
-                          final index =
-                              (details.localPosition.dx / kColumnWidth).floor();
-                          if (index >= 0 &&
-                              index < days.length &&
-                              !days[index].isFuture) {
-                            _openDetail(days[index]);
-                          }
-                        },
-                        child: SizedBox(
-                          width: totalWidth,
-                          height: graphHeight + tableHeight,
-                          child: Column(
-                            children: [
-                              CustomPaint(
-                                size: Size(totalWidth, graphHeight),
-                                painter: GraphPainter(
-                                  days: days,
-                                  colors: chartColors,
-                                  onSurface: onSurface,
-                                  muted: muted,
-                                  separator: theme.dividerColor,
+                // When the viewport is too short for the graph plus the table (a
+                // short landscape window), the whole chart scrolls vertically
+                // rather than overflowing; the gutter scrolls with it so its
+                // labels stay aligned.
+                final content = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _gutter(graphHeight, muted),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _scroll,
+                        scrollDirection: Axis.horizontal,
+                        child: GestureDetector(
+                          key: const Key('chart'),
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (details) {
+                            final index =
+                                (details.localPosition.dx / kColumnWidth)
+                                    .floor();
+                            if (index >= 0 &&
+                                index < days.length &&
+                                !days[index].isFuture) {
+                              _openDetail(days[index]);
+                            }
+                          },
+                          child: SizedBox(
+                            width: totalWidth,
+                            height: graphHeight + tableHeight,
+                            child: Column(
+                              children: [
+                                CustomPaint(
+                                  size: Size(totalWidth, graphHeight),
+                                  painter: GraphPainter(
+                                    days: days,
+                                    colors: chartColors,
+                                    onSurface: onSurface,
+                                    muted: muted,
+                                    separator: theme.dividerColor,
+                                  ),
                                 ),
-                              ),
-                              CustomPaint(
-                                size: Size(totalWidth, tableHeight),
-                                painter: AttributeTablePainter(
-                                  days: days,
-                                  colors: chartColors,
-                                  onSurface: onSurface,
-                                  muted: muted,
-                                  separator: theme.dividerColor,
+                                CustomPaint(
+                                  size: Size(totalWidth, tableHeight),
+                                  painter: AttributeTablePainter(
+                                    days: days,
+                                    colors: chartColors,
+                                    onSurface: onSurface,
+                                    muted: muted,
+                                    separator: theme.dividerColor,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              );
+                  ],
+                );
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: SizedBox(height: graphHeight + tableHeight, child: content),
-              );
-            },
+                return SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SizedBox(
+                    height: graphHeight + tableHeight,
+                    child: content,
+                  ),
+                );
+              },
+            ),
           );
         },
       ),
