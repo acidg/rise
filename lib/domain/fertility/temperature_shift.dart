@@ -19,7 +19,8 @@ class TemperatureShift {
   /// Highest of the six low measurements before the rise (the coverline).
   final double coverline;
 
-  /// Lowest of the three higher measurements that confirm the shift.
+  /// Lowest of the higher measurements that confirm the shift (three, or four
+  /// under the fourth-day exception).
   final double lowestHigherTemperature;
 
   const TemperatureShift({
@@ -76,7 +77,9 @@ TemperatureShift? detectTemperatureShift(List<double?> temperatures) {
         ovulationDay: i,
         confirmationDay: i + 4,
         coverline: coverline,
-        lowestHigherTemperature: lowestHigher,
+        // The fourth measurement is part of the confirming higher measurements,
+        // so it counts when finding the lowest of them.
+        lowestHigherTemperature: min(lowestHigher, fourth),
       );
     }
   }

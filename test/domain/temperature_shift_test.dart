@@ -34,7 +34,7 @@ void main() {
         final temps = <double?>[
           36.40, 36.40, 36.40, 36.40, 36.40, 36.40,
           36.50, 36.55, 36.52, // above coverline, but third is only +0.12
-          36.51, // fourth measurement above the coverline closes it
+          36.48, // fourth measurement above the coverline closes it
         ];
 
         final shift = detectTemperatureShift(temps);
@@ -42,6 +42,9 @@ void main() {
         expect(shift, isNotNull);
         expect(shift!.ovulationDay, 6);
         expect(shift.confirmationDay, 10); // fourth measurement
+        // The fourth measurement confirms the shift, so it is part of the
+        // higher measurements: the lowest higher point must include it.
+        expect(shift.lowestHigherTemperature, 36.48);
       },
     );
 
