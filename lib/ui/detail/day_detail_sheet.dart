@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../domain/models/day_entry.dart';
 import '../../domain/models/signs.dart';
@@ -26,6 +27,7 @@ class DayDetailSheet extends StatefulWidget {
 
 class _DayDetailSheetState extends State<DayDetailSheet> {
   late double _temperature;
+  late final TextEditingController _temperatureController;
   late Menstruation _menstruation;
   late CervicalMucus _mucus;
   Cervix? _cervix;
@@ -40,6 +42,9 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     super.initState();
     final entry = widget.entry;
     _temperature = entry.temperature ?? _defaultTemperature;
+    _temperatureController = TextEditingController(
+      text: _temperature.toStringAsFixed(2),
+    );
     _menstruation = entry.menstruation;
     _mucus = entry.mucus;
     _cervix = entry.cervix;
@@ -52,14 +57,31 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
 
   @override
   void dispose() {
+    _temperatureController.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  /// The temperature currently in the text field, falling back to the last
+  /// valid value when the field holds an incomplete or unparseable entry.
+  double get _currentTemperature =>
+      double.tryParse(_temperatureController.text.replaceAll(',', '.')) ??
+      _temperature;
+
+  /// Adjust the temperature by [delta] from the value currently shown and
+  /// rewrite the field, keeping it to two decimals.
+  void _step(double delta) {
+    final next = double.parse((_currentTemperature + delta).toStringAsFixed(2));
+    setState(() {
+      _temperature = next;
+      _temperatureController.text = next.toStringAsFixed(2);
+    });
   }
 
   void _save() {
     widget.onSave(
       widget.entry.copyWith(
-        temperature: _temperature,
+        temperature: _currentTemperature,
         menstruation: _menstruation,
         mucus: _mucus,
         cervix: _cervix,
@@ -159,18 +181,38 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
   Widget _temperatureField(BuildContext context) {
     return Row(
       children: [
-        Text(
-          '${_temperature.toStringAsFixed(2)} °C',
-          style: Theme.of(context).textTheme.headlineMedium,
+        SizedBox(
+          width: 140,
+          child: TextField(
+            key: const Key('temperature-field'),
+            controller: _temperatureController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+            ],
+            style: Theme.of(context).textTheme.headlineMedium,
+            decoration: const InputDecoration(
+              suffixText: '°C',
+              border: OutlineInputBorder(),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            onChanged: (value) {
+              final parsed = double.tryParse(value.replaceAll(',', '.'));
+              if (parsed != null) {
+                _temperature = parsed;
+              }
+            },
+          ),
         ),
         const Spacer(),
         IconButton.filledTonal(
-          onPressed: () => setState(() => _temperature -= _temperatureStep),
+          onPressed: () => _step(-_temperatureStep),
           icon: const Icon(Icons.remove),
         ),
         const SizedBox(width: 8),
         IconButton.filledTonal(
-          onPressed: () => setState(() => _temperature += _temperatureStep),
+          onPressed: () => _step(_temperatureStep),
           icon: const Icon(Icons.add),
         ),
       ],
