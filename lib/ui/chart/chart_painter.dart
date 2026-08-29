@@ -42,6 +42,7 @@ class GraphPainter extends CustomPainter {
       return;
     }
 
+    _paintZebra(canvas, size);
     _paintFertileBands(canvas, plotTop, plotBottom);
     _paintReferenceLines(canvas, plotTop, plotBottom);
     _paintOvulation(canvas, plotTop, plotBottom);
@@ -55,6 +56,17 @@ class GraphPainter extends CustomPainter {
     final clamped = temperature.clamp(_tempMin, _tempMax);
     final fraction = (clamped - _tempMin) / (_tempMax - _tempMin);
     return bottom - fraction * (bottom - top);
+  }
+
+  /// Subtle alternating column tint (zebra) to make columns easier to follow.
+  void _paintZebra(Canvas canvas, Size size) {
+    final paint = Paint()..color = colors.columnAlt;
+    for (var i = 1; i < days.length; i += 2) {
+      canvas.drawRect(
+        Rect.fromLTWH(i * kColumnWidth, 0, kColumnWidth, size.height),
+        paint,
+      );
+    }
   }
 
   void _paintFertileBands(Canvas canvas, double top, double bottom) {

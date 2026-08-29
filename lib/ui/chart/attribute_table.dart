@@ -65,6 +65,14 @@ class AttributeTablePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final zebraPaint = Paint()..color = colors.columnAlt;
+    for (var i = 1; i < days.length; i += 2) {
+      canvas.drawRect(
+        Rect.fromLTWH(i * kColumnWidth, 0, kColumnWidth, size.height),
+        zebraPaint,
+      );
+    }
+
     final separatorPaint = Paint()
       ..color = separator
       ..strokeWidth = 1;

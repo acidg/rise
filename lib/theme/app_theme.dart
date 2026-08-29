@@ -14,6 +14,9 @@ class ChartColors extends ThemeExtension<ChartColors> {
   final Color axis;
   final Color entryDot;
 
+  /// Translucent overlay tint for every other day column (zebra striping).
+  final Color columnAlt;
+
   const ChartColors({
     required this.temperature,
     required this.fertileFill,
@@ -24,6 +27,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
     required this.mucus,
     required this.axis,
     required this.entryDot,
+    required this.columnAlt,
   });
 
   @override
@@ -37,6 +41,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
     Color? mucus,
     Color? axis,
     Color? entryDot,
+    Color? columnAlt,
   }) {
     return ChartColors(
       temperature: temperature ?? this.temperature,
@@ -48,6 +53,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
       mucus: mucus ?? this.mucus,
       axis: axis ?? this.axis,
       entryDot: entryDot ?? this.entryDot,
+      columnAlt: columnAlt ?? this.columnAlt,
     );
   }
 
@@ -66,6 +72,7 @@ class ChartColors extends ThemeExtension<ChartColors> {
       mucus: Color.lerp(mucus, other.mucus, t)!,
       axis: Color.lerp(axis, other.axis, t)!,
       entryDot: Color.lerp(entryDot, other.entryDot, t)!,
+      columnAlt: Color.lerp(columnAlt, other.columnAlt, t)!,
     );
   }
 }
@@ -82,6 +89,7 @@ const ChartColors _lightChart = ChartColors(
   mucus: Color(0xFF37C2A8),
   axis: Color(0xFFB6BDC8),
   entryDot: _brandPink,
+  columnAlt: Color(0x08000000),
 );
 
 const ChartColors _darkChart = ChartColors(
@@ -94,6 +102,7 @@ const ChartColors _darkChart = ChartColors(
   mucus: Color(0xFF4FD1B5),
   axis: Color(0xFF5A6675),
   entryDot: Color(0xFFFF8AB8),
+  columnAlt: Color(0x0DFFFFFF),
 );
 
 /// Light theme for Rise.
