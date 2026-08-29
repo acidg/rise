@@ -1,11 +1,14 @@
 # Rise - Fertility Tracker
 
-Rise is a privacy-first symptothermal fertility tracker built around basal body
-temperature (BBT) thermometers whose original vendor app has been discontinued.
-When a manufacturer drops support for a device, a working thermometer becomes
-e-waste even though the hardware is fine. Rise keeps those devices useful: it
-talks to them directly over Bluetooth Low Energy, so the data - and the device -
-stay yours.
+Rise is a privacy-first symptothermal fertility tracker built around the Ovy
+OT35, a Bluetooth basal body temperature (BBT) thermometer whose vendor app has
+raised its minimum Android version beyond what many working phones can run. The
+app is still maintained, but after the device's certification as a medical
+product it now requires a recent Android release, so users on older but perfectly
+capable phones are cut off. When that happens a working thermometer becomes
+e-waste even though both it and the phone are fine. Rise keeps the OT35 useful:
+it talks to the device directly over Bluetooth Low Energy, so the data - and the
+device - stay yours.
 
 ## What it does
 
@@ -44,3 +47,20 @@ flutter run          # run on a connected device or emulator
 
 The domain logic (models and the Sensiplan rule engine) is pure Dart under
 `lib/domain/` with no Flutter dependency, so it runs and tests fast in isolation.
+
+## Disclaimer
+
+Rise is an independent, community-built project. It is not affiliated with,
+endorsed by, sponsored by, or otherwise connected to Ovy GmbH in any way. "Ovy"
+and any related names or trademarks belong to their respective owners and are
+used here only to identify the thermometer the app works with. Rise is not a
+medical device and makes no medical claims; the official vendor app is the only
+certified medical product for this hardware.
+
+## License
+
+Rise is free software licensed under the GNU General Public License v3.0. You
+may redistribute and modify it under the terms of that license; it comes with no
+warranty. See [LICENSE](LICENSE) for the full text.
+
+Copyright (C) 2026 Rise contributors
