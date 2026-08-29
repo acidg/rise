@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/models/signs.dart';
 import '../../theme/app_theme.dart';
 import 'chart_day.dart';
 
-/// Width of one day column. The chart scrolls horizontally by this unit.
+/// Width of one day column. The chart and the attribute table share this unit
+/// and scroll together.
 const double kColumnWidth = 44;
 
 const double _tempMin = 36.0;
 const double _tempMax = 37.3;
 const double _headerHeight = 46;
-const double _attrRowHeight = 26;
-const int _attrRowCount = 2; // period, then mucus
+const double _plotBottomPad = 8;
 
 const List<String> _monthAbbr = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
@@ -19,15 +18,16 @@ const List<String> _monthAbbr = [
 ];
 
 /// Draws the temperature curve with the fertile window, ovulation, coverline,
-/// per-day headers, and the period and mucus attribute rows. Orientation is
-/// horizontal: one column per day, oldest on the left.
-class ChartPainter extends CustomPainter {
+/// and the per-day header (date, cycle day, entry indicator). The other signs
+/// are drawn by the attribute table below. Horizontal: one column per day,
+/// oldest on the left.
+class GraphPainter extends CustomPainter {
   final List<ChartDay> days;
   final ChartColors colors;
   final Color onSurface;
   final Color muted;
 
-  ChartPainter({
+  GraphPainter({
     required this.days,
     required this.colors,
     required this.onSurface,
@@ -37,7 +37,7 @@ class ChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final plotTop = _headerHeight;
-    final plotBottom = size.height - _attrRowCount * _attrRowHeight;
+    final plotBottom = size.height - _plotBottomPad;
     if (plotBottom <= plotTop) {
       return;
     }
@@ -47,7 +47,6 @@ class ChartPainter extends CustomPainter {
     _paintOvulation(canvas, plotTop, plotBottom);
     _paintTemperature(canvas, plotTop, plotBottom);
     _paintHeaders(canvas);
-    _paintAttributes(canvas, plotBottom);
   }
 
   double _centerX(int index) => index * kColumnWidth + kColumnWidth / 2;
@@ -75,7 +74,6 @@ class ChartPainter extends CustomPainter {
     final paint = Paint()
       ..color = colors.coverline
       ..strokeWidth = 1.5;
-    // Draw one dashed segment per run of days that share a coverline value.
     var i = 0;
     while (i < days.length) {
       final cover = days[i].coverline;
@@ -158,59 +156,6 @@ class ChartPainter extends CustomPainter {
     }
   }
 
-  void _paintAttributes(Canvas canvas, double plotBottom) {
-    final periodRowY = plotBottom + _attrRowHeight / 2;
-    final mucusRowY = plotBottom + _attrRowHeight + _attrRowHeight / 2;
-    for (var i = 0; i < days.length; i++) {
-      final centerX = _centerX(i);
-      final entry = days[i].entry;
-
-      final periodColor = _periodColor(entry.menstruation);
-      if (periodColor != null) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(
-              center: Offset(centerX, periodRowY),
-              width: 12,
-              height: 16,
-            ),
-            const Radius.circular(3),
-          ),
-          Paint()..color = periodColor,
-        );
-      }
-
-      final mucusColor = _mucusColor(entry.mucus);
-      if (mucusColor != null) {
-        canvas.drawCircle(
-          Offset(centerX, mucusRowY),
-          6,
-          Paint()..color = mucusColor,
-        );
-      }
-    }
-  }
-
-  Color? _periodColor(Menstruation menstruation) {
-    return switch (menstruation) {
-      Menstruation.heavy => colors.period,
-      Menstruation.medium => colors.period.withValues(alpha: 0.85),
-      Menstruation.light => colors.period.withValues(alpha: 0.6),
-      Menstruation.spotting => colors.period.withValues(alpha: 0.4),
-      Menstruation.none => null,
-    };
-  }
-
-  Color? _mucusColor(CervicalMucus mucus) {
-    return switch (mucus) {
-      CervicalMucus.eggWhite => colors.mucus,
-      CervicalMucus.watery => colors.mucus.withValues(alpha: 0.75),
-      CervicalMucus.creamy => colors.mucus.withValues(alpha: 0.5),
-      CervicalMucus.sticky => colors.mucus.withValues(alpha: 0.35),
-      CervicalMucus.dry || CervicalMucus.none => null,
-    };
-  }
-
   void _dashedLine(Canvas canvas, Offset from, Offset to, Paint paint) {
     const dash = 4.0;
     const gap = 3.0;
@@ -252,6 +197,6 @@ class ChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(ChartPainter oldDelegate) =>
+  bool shouldRepaint(GraphPainter oldDelegate) =>
       oldDelegate.days != days || oldDelegate.colors != colors;
 }
