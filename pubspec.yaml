@@ -46,6 +46,27 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates the launcher icons, including an Android adaptive icon with
+  # separate foreground/background layers so launchers mask it natively
+  # instead of plating it inside a generated circle. Regenerate with:
+  #   dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.4
+
+# Launcher icon generation. Sources live in assets/icon/ as SVGs and are
+# rasterised to the PNGs referenced here.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  # Legacy square icon (pre-Android 8 and iOS): the full composition.
+  image_path: "assets/icon/icon.png"
+  # Android adaptive icon: gradient plate + transparent comet foreground.
+  adaptive_icon_background: "assets/icon/ic_background.png"
+  adaptive_icon_foreground: "assets/icon/ic_foreground.png"
+  min_sdk_android: 21
+  # iOS forbids alpha in the app icon; flatten onto the plate colour.
+  remove_alpha_ios: true
+  background_color_ios: "#101B31"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Rise icon background">
+  <defs>
+    <linearGradient id="rise-comet-ground" x1="0.2" y1="1" x2="0.8" y2="0">
+      <stop offset="0" stop-color="#101B31"/>
+      <stop offset="0.6" stop-color="#1B2C4E"/>
+      <stop offset="1" stop-color="#2A4374"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#rise-comet-ground)"/>
+</svg>
