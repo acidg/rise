@@ -4,7 +4,10 @@ import '../../domain/models/day_entry.dart';
 /// cycle and fertility facts the chart needs to draw it.
 class ChartDay {
   final DayEntry entry;
-  final int cycleDay;
+
+  /// 1-based cycle day, or null when the day belongs to a run with no known
+  /// cycle start (rendered as "?").
+  final int? cycleDay;
   final bool fertile;
   final bool isOvulation;
 

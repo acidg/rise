@@ -86,6 +86,44 @@ void main() {
     expect(day.temperature, 36.55);
   });
 
+  test('no bleeding logged yields an unknown status and "?" days', () async {
+    final base = DateTime(2026, 4, 1);
+    final controller = AppController(
+      repository: InMemoryEntryRepository([
+        for (var i = 0; i < 4; i++)
+          DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
+      ]),
+      thermometer: FakeThermometerService(),
+    );
+
+    await controller.load();
+
+    expect(controller.status.isKnown, isFalse);
+    expect(controller.days.every((d) => d.cycleDay == null), isTrue);
+  });
+
+  test('a cycle beginning with bleeding reports its current day', () async {
+    final base = DateTime(2026, 4, 1);
+    final controller = AppController(
+      repository: InMemoryEntryRepository([
+        DayEntry(
+          date: base,
+          menstruation: Menstruation.medium,
+          temperature: 36.4,
+        ),
+        for (var i = 1; i < 12; i++)
+          DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
+      ]),
+      thermometer: FakeThermometerService(),
+    );
+
+    await controller.load();
+
+    expect(controller.status.isKnown, isTrue);
+    expect(controller.status.cycleDay, 12);
+    expect(controller.status.nextEvent, isNotNull);
+  });
+
   test('a remembered paired device is loaded on startup', () async {
     const device = DiscoveredThermometer(id: 'AA:BB', name: 'Ovy OT35');
     final controller = AppController(

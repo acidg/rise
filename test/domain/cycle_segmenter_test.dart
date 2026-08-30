@@ -33,6 +33,34 @@ void main() {
     expect(cycles[1].isCurrent, isTrue);
   });
 
+  test('data starting mid-cycle keeps the leading run as unknown-start', () {
+    final days = <DayEntry>[
+      // Recording began before any bleeding was logged.
+      for (var i = 0; i < 6; i++) day(i, Menstruation.none),
+      day(6, Menstruation.medium), // first observed onset
+      for (var i = 7; i < 12; i++) day(i, Menstruation.none),
+    ];
+
+    final cycles = segmenter.segment(days);
+
+    expect(cycles.length, 2);
+    expect(cycles[0].hasKnownStart, isFalse);
+    expect(cycles[0].length, 6);
+    expect(cycles[1].hasKnownStart, isTrue);
+    expect(cycles[1].isCurrent, isTrue);
+    expect(cycles[1].length, 6);
+  });
+
+  test('with no bleeding at all the whole record is one unknown-start cycle', () {
+    final days = [for (var i = 0; i < 8; i++) day(i, Menstruation.none)];
+
+    final cycles = segmenter.segment(days);
+
+    expect(cycles.length, 1);
+    expect(cycles.single.hasKnownStart, isFalse);
+    expect(cycles.single.isCurrent, isTrue);
+  });
+
   test('mid-cycle spotting does not start a new cycle', () {
     final days = <DayEntry>[
       day(0, Menstruation.medium),

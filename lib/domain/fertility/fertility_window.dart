@@ -29,6 +29,16 @@ class FertilityWindow {
     this.lowestHigherTemperature,
   });
 
+  /// An empty window for a run with no known cycle start: nothing is fertile and
+  /// there is no ovulation to mark.
+  const FertilityWindow.none()
+    : firstFertileDay = 1,
+      lastFertileDay = 0,
+      ovulationDay = 0,
+      confirmed = false,
+      coverline = null,
+      lowestHigherTemperature = null;
+
   /// Whether [cycleDay] falls within the fertile window.
   bool isFertile(int cycleDay) =>
       cycleDay >= firstFertileDay && cycleDay <= lastFertileDay;

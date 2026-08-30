@@ -310,14 +310,10 @@ class GraphPainter extends CustomPainter {
         muted,
         9,
       );
+      final cycleDayLabel = day.cycleDay?.toString() ?? '?';
       if (day.isToday) {
         // Today's cycle day sits in a filled pill so it stands out.
-        final label = _layout(
-          '${day.cycleDay}',
-          13,
-          bold: true,
-          color: Colors.white,
-        );
+        final label = _layout(cycleDayLabel, 13, bold: true, color: Colors.white);
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromCenter(
@@ -334,15 +330,7 @@ class GraphPainter extends CustomPainter {
           Offset(centerX - label.width / 2, cycleDayY - label.height / 2),
         );
       } else {
-        _text(
-          canvas,
-          '${day.cycleDay}',
-          centerX,
-          20,
-          onSurface,
-          13,
-          bold: true,
-        );
+        _text(canvas, cycleDayLabel, centerX, 20, onSurface, 13, bold: true);
       }
       if (day.hasEntry) {
         canvas.drawCircle(
