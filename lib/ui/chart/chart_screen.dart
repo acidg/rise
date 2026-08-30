@@ -5,6 +5,7 @@ import '../app_controller.dart';
 import '../cycle_status.dart';
 import '../detail/day_detail_sheet.dart';
 import '../settings/settings_screen.dart';
+import '../temperature_conflict_dialog.dart';
 import 'attribute_table.dart';
 import 'chart_day.dart';
 import 'chart_painter.dart';
@@ -42,6 +43,65 @@ class _ChartScreenState extends State<ChartScreen> {
   void dispose() {
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// The AppBar sync button, shown only once a thermometer is paired. It spins
+  /// while a sync runs and reports the result (or how to wake the device) with a
+  /// snackbar, mirroring the sync control in settings.
+  Widget _syncAction(BuildContext context) {
+    final controller = widget.controller;
+    if (controller.pairedDevice == null) {
+      return const SizedBox.shrink();
+    }
+    if (controller.isSyncing) {
+      return const IconButton(
+        onPressed: null,
+        tooltip: 'Syncing…',
+        icon: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.sync),
+      tooltip: 'Sync thermometer',
+      onPressed: _sync,
+    );
+  }
+
+  Future<void> _sync() async {
+    final controller = widget.controller;
+    // Sync needs the maintained connection up; guide the user to wake the
+    // thermometer rather than failing silently.
+    if (!controller.thermometerStatus.connected) {
+      _showSnackBar(
+        'Press the button on your thermometer to wake it, then sync.',
+      );
+      return;
+    }
+    try {
+      final count = await controller.sync(
+        resolveConflict: (conflict) =>
+            confirmTemperatureOverwrite(context, conflict),
+      );
+      if (count == null) {
+        return;
+      }
+      _showSnackBar('Synced $count measurements');
+    } on Object catch (error) {
+      _showSnackBar(error.toString());
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _openDetail(ChartDay day) {
@@ -95,6 +155,10 @@ class _ChartScreenState extends State<ChartScreen> {
           builder: (context, _) => _title(context),
         ),
         actions: [
+          ListenableBuilder(
+            listenable: widget.controller,
+            builder: (context, _) => _syncAction(context),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(

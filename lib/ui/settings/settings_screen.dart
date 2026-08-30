@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../ble/thermometer_service.dart';
 import '../app_controller.dart';
+import '../temperature_conflict_dialog.dart';
 
 /// Settings: appearance (theme) and thermometer pairing.
 class SettingsScreen extends StatelessWidget {
@@ -63,68 +64,20 @@ class DevicePairingSection extends StatefulWidget {
 class _DevicePairingSectionState extends State<DevicePairingSection> {
   _PairState _state = _PairState.idle;
   List<DiscoveredThermometer> _found = const [];
-  bool _syncing = false;
-  ThermometerStatus _status = const ThermometerStatus();
-  ThermometerSession? _session;
-  StreamSubscription<ThermometerStatus>? _statusSub;
   StreamSubscription<List<DiscoveredThermometer>>? _scanSub;
 
   ThermometerService get _thermometer => widget.controller.thermometer;
+  ThermometerStatus get _status => widget.controller.thermometerStatus;
   bool get _connected => _status.connected;
-
-  @override
-  void initState() {
-    super.initState();
-    // The paired device may load asynchronously, so react to the controller to
-    // open the connection once it appears.
-    widget.controller.addListener(_syncSession);
-    _syncSession();
-  }
+  bool get _syncing => widget.controller.isSyncing;
 
   @override
   void dispose() {
-    widget.controller.removeListener(_syncSession);
     _scanSub?.cancel();
-    unawaited(_closeSession());
     super.dispose();
   }
 
-  /// Keep a live connection open exactly while the paired card is the visible
-  /// view; the session holds one link open and reconnects on its own.
-  void _syncSession() {
-    final device = widget.controller.pairedDevice;
-    final shouldConnect = device != null && _state == _PairState.idle;
-    if (shouldConnect) {
-      if (_session == null) {
-        final session = _thermometer.openSession(device.id);
-        _session = session;
-        _statusSub = session.status.listen((status) {
-          if (mounted) {
-            setState(() => _status = status);
-          }
-        });
-      }
-    } else {
-      unawaited(_closeSession());
-    }
-  }
-
-  /// Tear down the session and wait for it to release the radio, so a following
-  /// scan is not sabotaged by the connection's async teardown.
-  Future<void> _closeSession() async {
-    await _statusSub?.cancel();
-    _statusSub = null;
-    final session = _session;
-    _session = null;
-    _status = const ThermometerStatus();
-    await session?.close();
-  }
-
   Future<void> _scan() async {
-    await _closeSession();
-    if (!mounted) {
-      return;
-    }
     setState(() {
       _state = _PairState.scanning;
       _found = const [];
@@ -191,87 +144,28 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
       return;
     }
     setState(() => _state = _PairState.idle);
-    // Open the maintained connection to the freshly paired device.
-    _syncSession();
   }
 
   Future<void> _sync() async {
-    final session = _session;
-    if (session == null || !_connected) {
-      return;
-    }
-    setState(() => _syncing = true);
     try {
-      final result = await session.sync();
-      await widget.controller.importMeasurements(
-        result.measurements,
-        resolveConflict: _confirmOverwrite,
+      final count = await widget.controller.sync(
+        resolveConflict: (conflict) =>
+            confirmTemperatureOverwrite(context, conflict),
       );
-      if (!mounted) {
+      if (!mounted || count == null) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Synced ${result.measurements.length} measurements'),
-        ),
+        SnackBar(content: Text('Synced $count measurements')),
       );
     } on Object catch (error) {
       if (mounted) {
         _showError(error);
       }
-    } finally {
-      if (mounted) {
-        setState(() => _syncing = false);
-      }
     }
   }
-
-  /// Ask the user whether a synced reading should overwrite the temperature
-  /// already stored for its day. Returns false (keep the stored value) when the
-  /// screen is gone or the dialog is dismissed, so a reading is never overwritten
-  /// without an explicit yes.
-  Future<bool> _confirmOverwrite(TemperatureConflict conflict) async {
-    if (!mounted) {
-      return false;
-    }
-    final materialLocalizations = MaterialLocalizations.of(context);
-    final existingAt = conflict.existingAt;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Overwrite temperature?'),
-        content: Text(
-          'On ${materialLocalizations.formatMediumDate(conflict.day)} '
-          'you already have ${_formatTemperature(conflict.existing)}'
-          '${existingAt == null ? '' : ' at ${_formatTime(existingAt)}'} '
-          'recorded. The thermometer reported '
-          '${_formatTemperature(conflict.incoming)} at '
-          '${_formatTime(conflict.incomingAt)}.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep existing'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Overwrite'),
-          ),
-        ],
-      ),
-    );
-    return confirmed ?? false;
-  }
-
-  String _formatTemperature(double celsius) =>
-      '${celsius.toStringAsFixed(2)} °C';
-
-  String _formatTime(DateTime at) => MaterialLocalizations.of(
-    context,
-  ).formatTimeOfDay(TimeOfDay.fromDateTime(at));
 
   Future<void> _forget() async {
-    await _closeSession();
     await widget.controller.forgetPairedDevice();
     if (mounted) {
       setState(() => _state = _PairState.idle);

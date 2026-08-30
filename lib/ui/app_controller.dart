@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -71,6 +72,25 @@ class AppController extends ChangeNotifier {
   DiscoveredThermometer? _pairedDevice;
   DiscoveredThermometer? get pairedDevice => _pairedDevice;
 
+  /// The maintained connection to the paired thermometer, held open exactly
+  /// while a device is remembered so a sync can run without scan/connect churn.
+  ThermometerSession? _session;
+  String? _sessionDeviceId;
+  StreamSubscription<ThermometerStatus>? _statusSub;
+
+  ThermometerStatus _thermometerStatus = const ThermometerStatus();
+
+  /// Live status of the maintained connection to the paired thermometer:
+  /// connected state, signal strength, and battery. Reset to disconnected when
+  /// no device is paired.
+  ThermometerStatus get thermometerStatus => _thermometerStatus;
+
+  bool _syncing = false;
+
+  /// Whether a sync is in progress. Screens observe this to show a spinner and
+  /// disable their sync controls.
+  bool get isSyncing => _syncing;
+
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
@@ -88,6 +108,7 @@ class AppController extends ChangeNotifier {
     _status = _computeStatus(analyzed);
     _pairedDevice = await pairedDeviceStore.load();
     _loaded = true;
+    _reconcileSession();
     notifyListeners();
   }
 
@@ -95,6 +116,7 @@ class AppController extends ChangeNotifier {
   Future<void> rememberPairedDevice(DiscoveredThermometer device) async {
     await pairedDeviceStore.save(device);
     _pairedDevice = device;
+    _reconcileSession();
     notifyListeners();
   }
 
@@ -103,7 +125,77 @@ class AppController extends ChangeNotifier {
   Future<void> forgetPairedDevice() async {
     await pairedDeviceStore.clear();
     _pairedDevice = null;
+    _reconcileSession();
     notifyListeners();
+  }
+
+  /// Pull the history from the paired thermometer over the maintained
+  /// connection and fold it into the day entries, asking [resolveConflict]
+  /// before overwriting a diverging stored temperature. Returns the number of
+  /// measurements read, or null when there is nothing to sync (no device, not
+  /// connected, or a sync already running). Rethrows any transfer error so the
+  /// caller can surface it; [isSyncing] is cleared either way.
+  Future<int?> sync({TemperatureConflictResolver? resolveConflict}) async {
+    final session = _session;
+    if (session == null || !_thermometerStatus.connected || _syncing) {
+      return null;
+    }
+    _syncing = true;
+    notifyListeners();
+    try {
+      final result = await session.sync();
+      await importMeasurements(
+        result.measurements,
+        resolveConflict: resolveConflict,
+      );
+      return result.measurements.length;
+    } finally {
+      _syncing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Open, close, or re-point the maintained connection so it always tracks the
+  /// currently paired device. A no-op when the session already targets that
+  /// device, so the repeated [load] calls after an edit or sync never churn the
+  /// connection.
+  void _reconcileSession() {
+    final device = _pairedDevice;
+    if (device == null) {
+      unawaited(_closeSession());
+      return;
+    }
+    if (_session != null && _sessionDeviceId == device.id) {
+      return;
+    }
+    unawaited(_openSession(device));
+  }
+
+  Future<void> _openSession(DiscoveredThermometer device) async {
+    await _closeSession();
+    final session = thermometer.openSession(device.id);
+    _session = session;
+    _sessionDeviceId = device.id;
+    _statusSub = session.status.listen((status) {
+      _thermometerStatus = status;
+      notifyListeners();
+    });
+  }
+
+  Future<void> _closeSession() async {
+    await _statusSub?.cancel();
+    _statusSub = null;
+    final session = _session;
+    _session = null;
+    _sessionDeviceId = null;
+    _thermometerStatus = const ThermometerStatus();
+    await session?.close();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_closeSession());
+    super.dispose();
   }
 
   /// Persist an edited [entry] and refresh the chart.

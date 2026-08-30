@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rise/ble/measurement.dart';
 import 'package:rise/ble/thermometer_service.dart';
 import 'package:rise/data/entry_repository.dart';
+import 'package:rise/data/paired_device_store.dart';
 import 'package:rise/domain/models/day_entry.dart';
 import 'package:rise/domain/models/signs.dart';
 import 'package:rise/theme/app_theme.dart';
@@ -64,6 +66,42 @@ void main() {
 
     expect(find.text('Cycle day ?'), findsOneWidget);
     expect(find.text('No cycle detected'), findsOneWidget);
+  });
+
+  testWidgets('no sync button is shown when no thermometer is paired', (
+    tester,
+  ) async {
+    final controller = loadedController();
+    await controller.load();
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.sync), findsNothing);
+  });
+
+  testWidgets('the sync button pulls readings from the paired thermometer', (
+    tester,
+  ) async {
+    final synced = DateTime(2026, 3, 11, 6, 30);
+    final controller = AppController(
+      repository: InMemoryEntryRepository(sampleEntries()),
+      thermometer: FakeThermometerService(
+        measurements: [Measurement(timestamp: synced, celsius: 36.72)],
+      ),
+      pairedDeviceStore: InMemoryPairedDeviceStore(
+        const DiscoveredThermometer(id: 'AA:BB', name: 'Ovy OT35'),
+      ),
+    );
+    await controller.load();
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.sync));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Synced 1 measurements'), findsOneWidget);
+    final day = controller.days.firstWhere((d) => d.date == DateTime(2026, 3, 11));
+    expect(day.entry.temperature, 36.72);
   });
 
   testWidgets('tapping a day opens its editable detail sheet', (tester) async {
