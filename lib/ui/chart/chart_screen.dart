@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../app_controller.dart';
+import '../cycle_status.dart';
 import '../detail/day_detail_sheet.dart';
 import '../settings/settings_screen.dart';
 import 'attribute_table.dart';
@@ -89,7 +90,10 @@ class _ChartScreenState extends State<ChartScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rise'),
+        title: ListenableBuilder(
+          listenable: widget.controller,
+          builder: (context, _) => _title(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -197,6 +201,44 @@ class _ChartScreenState extends State<ChartScreen> {
         },
       ),
     );
+  }
+
+  /// Title bar summary: current cycle day with fertility phase and next event.
+  /// Falls back to the app name before data has loaded.
+  Widget _title(BuildContext context) {
+    final controller = widget.controller;
+    if (!controller.isLoaded || controller.days.isEmpty) {
+      return const Text('Rise');
+    }
+    final theme = Theme.of(context);
+    final status = controller.status;
+    final subtitle = _subtitle(status);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Cycle day ${status.cycleDay ?? '?'}',
+          style: theme.textTheme.titleMedium,
+        ),
+        if (subtitle != null)
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    );
+  }
+
+  String? _subtitle(CycleStatus status) {
+    if (!status.isKnown) {
+      return 'No cycle detected';
+    }
+    final phase = status.phase == CyclePhase.fertile ? 'Fertile' : 'Infertile';
+    final next = status.nextEvent;
+    return next == null ? phase : '$phase · $next';
   }
 
   Widget _gutter(double graphHeight, Color muted) {

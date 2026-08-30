@@ -12,6 +12,11 @@ abstract interface class CycleSegmenter {
 /// Starts a new cycle on each menstruation onset: the first day of real bleeding
 /// (light or heavier) that follows a day without such bleeding. Spotting does
 /// not start a cycle, so mid-cycle or premenstrual spotting is ignored.
+///
+/// A history can begin mid-cycle, so the days before the first onset are kept as
+/// a leading run with an unknown start ([Cycle.hasKnownStart] false) rather than
+/// being numbered from day one. When no bleeding is logged at all, the whole
+/// record is one such unknown-start run.
 class MenstruationCycleSegmenter implements CycleSegmenter {
   const MenstruationCycleSegmenter();
 
@@ -21,27 +26,33 @@ class MenstruationCycleSegmenter implements CycleSegmenter {
       return const [];
     }
 
-    final starts = <int>[];
+    final onsets = <int>[];
     for (var i = 0; i < days.length; i++) {
       if (!days[i].menstruation.isFlow) {
         continue;
       }
       if (i == 0 || !days[i - 1].menstruation.isFlow) {
-        starts.add(i);
+        onsets.add(i);
       }
     }
-    // Keep any days logged before the first period as a leading partial cycle so
-    // no data is dropped.
-    if (starts.isEmpty || starts.first != 0) {
-      starts.insert(0, 0);
+
+    if (onsets.isEmpty) {
+      // No bleeding recorded: a single open run whose cycle start is unknown.
+      return [Cycle(days: days, isCurrent: true, hasKnownStart: false)];
     }
 
     final cycles = <Cycle>[];
-    for (var s = 0; s < starts.length; s++) {
-      final from = starts[s];
-      final to = s + 1 < starts.length ? starts[s + 1] : days.length;
+    // Days before the first onset belong to a cycle whose start we never saw.
+    if (onsets.first != 0) {
       cycles.add(
-        Cycle(days: days.sublist(from, to), isCurrent: s == starts.length - 1),
+        Cycle(days: days.sublist(0, onsets.first), hasKnownStart: false),
+      );
+    }
+    for (var o = 0; o < onsets.length; o++) {
+      final from = onsets[o];
+      final to = o + 1 < onsets.length ? onsets[o + 1] : days.length;
+      cycles.add(
+        Cycle(days: days.sublist(from, to), isCurrent: o == onsets.length - 1),
       );
     }
     return cycles;

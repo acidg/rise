@@ -11,6 +11,10 @@ import '../domain/fertility/fertility_window.dart';
 import '../domain/models/cycle.dart';
 import '../domain/models/day_entry.dart';
 import 'chart/chart_day.dart';
+import 'cycle_status.dart';
+
+/// Typical luteal phase length, used to predict the next period from ovulation.
+const int _lutealLength = 14;
 
 /// A synced reading that disagrees with a temperature already stored for its day.
 /// Surfaced by [AppController.importMeasurements] so the caller can ask the user
@@ -70,10 +74,18 @@ class AppController extends ChangeNotifier {
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
+  CycleStatus _status = const CycleStatus.unknown();
+
+  /// Summary of the current cycle for the title bar: cycle day, fertility phase,
+  /// and the next expected event. Unknown when no cycle can be detected.
+  CycleStatus get status => _status;
+
   /// Load entries, the remembered paired device, and compute the chart days.
   Future<void> load() async {
     final entries = await repository.loadAll();
-    _days = _buildChartDays(entries);
+    final analyzed = analysis.analyze(entries);
+    _days = _buildChartDays(analyzed);
+    _status = _computeStatus(analyzed);
     _pairedDevice = await pairedDeviceStore.load();
     _loaded = true;
     notifyListeners();
@@ -181,11 +193,12 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<ChartDay> _buildChartDays(List<DayEntry> entries) {
+  List<ChartDay> _buildChartDays(List<AnalyzedCycle> analyzed) {
     final result = <ChartDay>[];
-    for (final analyzed in analysis.analyze(entries)) {
-      final window = analyzed.window;
-      final cycle = analyzed.cycle;
+    for (final cycleWithWindow in analyzed) {
+      final window = cycleWithWindow.window;
+      final cycle = cycleWithWindow.cycle;
+      final known = cycle.hasKnownStart;
       final days = cycle.days;
       for (var i = 0; i < days.length; i++) {
         final cycleDay = i + 1;
@@ -193,16 +206,17 @@ class AppController extends ChangeNotifier {
         // minus five) and run to the end of the fertile window, where the
         // temperature shift closes it. They must not spread past the window.
         final onShiftBand =
+            known &&
             window.confirmed &&
             cycleDay >= window.ovulationDay - 5 &&
             cycleDay <= window.lastFertileDay;
         result.add(
           ChartDay(
             entry: days[i],
-            cycleDay: cycleDay,
-            fertile: window.isFertile(cycleDay),
-            isOvulation: cycleDay == window.ovulationDay,
-            confirmed: window.confirmed,
+            cycleDay: known ? cycleDay : null,
+            fertile: known && window.isFertile(cycleDay),
+            isOvulation: known && cycleDay == window.ovulationDay,
+            confirmed: known && window.confirmed,
             coverline: onShiftBand ? window.coverline : null,
             lowestHigherTemperature: onShiftBand
                 ? window.lowestHigherTemperature
@@ -211,12 +225,40 @@ class AppController extends ChangeNotifier {
           ),
         );
       }
-      if (cycle.isCurrent) {
+      // Predictions only make sense once a cycle start is known.
+      if (cycle.isCurrent && known) {
         result.addAll(_futureDays(cycle, window, days.length));
       }
     }
     return result;
   }
+
+  /// Derive the title-bar summary from the current (last) cycle. Unknown when
+  /// there is no cycle, or the current run has no known start.
+  CycleStatus _computeStatus(List<AnalyzedCycle> analyzed) {
+    if (analyzed.isEmpty) {
+      return const CycleStatus.unknown();
+    }
+    final current = analyzed.last;
+    if (!current.cycle.hasKnownStart) {
+      return const CycleStatus.unknown();
+    }
+    final day = current.cycle.length;
+    final window = current.window;
+    final phase = window.isFertile(day) ? CyclePhase.fertile : CyclePhase.infertile;
+
+    final String nextEvent;
+    if (day < window.ovulationDay) {
+      nextEvent = _inDays('Ovulation', window.ovulationDay - day);
+    } else {
+      final untilPeriod = window.ovulationDay + _lutealLength - day;
+      nextEvent = untilPeriod > 0 ? _inDays('Period', untilPeriod) : 'Period due';
+    }
+    return CycleStatus(cycleDay: day, phase: phase, nextEvent: nextEvent);
+  }
+
+  static String _inDays(String event, int days) =>
+      '$event in ~$days ${days == 1 ? 'day' : 'days'}';
 
   /// Predicted days past today for the current cycle: empty slots that extend to
   /// the end of the predicted fertile window (plus a small margin), so the

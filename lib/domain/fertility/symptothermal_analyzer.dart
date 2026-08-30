@@ -63,16 +63,31 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
   @override
   List<FertilityWindow> analyze(List<Cycle> cycles) {
     final facts = cycles.map(_extractFacts).toList();
-    final completed = facts.where((f) => !f.cycle.isCurrent).toList();
+    // Only cycles with a known start have a valid length and cycle-day numbering,
+    // so the calendar and prediction rules draw on those alone.
+    final completed = facts
+        .where((f) => !f.cycle.isCurrent && f.cycle.hasKnownStart)
+        .toList();
     final earliestFhm = _minus8EarliestFirstHigherMeasurement(completed);
     final predictedOvulation = _predictedOvulationDay(completed);
 
     final windows = <FertilityWindow>[];
+    _CycleFacts? previousKnown;
     for (var i = 0; i < facts.length; i++) {
-      final previous = i > 0 ? facts[i - 1] : null;
+      final factsForCycle = facts[i];
+      if (!factsForCycle.cycle.hasKnownStart) {
+        windows.add(const FertilityWindow.none());
+        continue;
+      }
       windows.add(
-        _windowFor(facts[i], previous, earliestFhm, predictedOvulation),
+        _windowFor(
+          factsForCycle,
+          previousKnown,
+          earliestFhm,
+          predictedOvulation,
+        ),
       );
+      previousKnown = factsForCycle;
     }
     return windows;
   }

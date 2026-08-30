@@ -41,8 +41,29 @@ void main() {
     await tester.pumpWidget(wrap(controller));
     await tester.pumpAndSettle();
 
-    expect(find.text('Rise'), findsOneWidget);
+    // The sample opens with a logged period, so the title shows the cycle day.
+    expect(find.text('Cycle day 10'), findsOneWidget);
     expect(find.byKey(const Key('chart')), findsOneWidget);
+  });
+
+  testWidgets('with no bleeding logged the title shows a "?" cycle day', (
+    tester,
+  ) async {
+    final base = DateTime(2026, 3, 1);
+    final controller = AppController(
+      repository: InMemoryEntryRepository([
+        for (var i = 0; i < 5; i++)
+          DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
+      ]),
+      thermometer: FakeThermometerService(),
+    );
+    await controller.load();
+
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cycle day ?'), findsOneWidget);
+    expect(find.text('No cycle detected'), findsOneWidget);
   });
 
   testWidgets('tapping a day opens its editable detail sheet', (tester) async {
