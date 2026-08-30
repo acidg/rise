@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rise/ble/thermometer_service.dart';
 import 'package:rise/data/entry_repository.dart';
+import 'package:rise/data/paired_device_store.dart';
 import 'package:rise/domain/models/day_entry.dart';
 import 'package:rise/domain/models/signs.dart';
 import 'package:rise/ui/app_controller.dart';
@@ -35,4 +36,36 @@ void main() {
       expect(updated.hasEntry, isTrue);
     },
   );
+
+  test('a remembered paired device is loaded on startup', () async {
+    const device = DiscoveredThermometer(id: 'AA:BB', name: 'Ovy OT35');
+    final controller = AppController(
+      repository: InMemoryEntryRepository(const []),
+      thermometer: FakeThermometerService(),
+      pairedDeviceStore: InMemoryPairedDeviceStore(device),
+    );
+
+    await controller.load();
+
+    expect(controller.pairedDevice, device);
+  });
+
+  test('remembering then forgetting a device persists to the store', () async {
+    const device = DiscoveredThermometer(id: 'AA:BB', name: 'Ovy OT35');
+    final store = InMemoryPairedDeviceStore();
+    final controller = AppController(
+      repository: InMemoryEntryRepository(const []),
+      thermometer: FakeThermometerService(),
+      pairedDeviceStore: store,
+    );
+    await controller.load();
+
+    await controller.rememberPairedDevice(device);
+    expect(controller.pairedDevice, device);
+    expect(await store.load(), device);
+
+    await controller.forgetPairedDevice();
+    expect(controller.pairedDevice, isNull);
+    expect(await store.load(), isNull);
+  });
 }

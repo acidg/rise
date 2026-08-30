@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../ble/thermometer_service.dart';
@@ -34,21 +36,25 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 28),
           Text('Thermometer', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          DevicePairingSection(thermometer: controller.thermometer),
+          DevicePairingSection(controller: controller),
         ],
       ),
     );
   }
 }
 
-enum _PairState { idle, scanning, selecting, paired }
+/// Transient state of the scan flow. The paired device itself lives in the
+/// [AppController] so it persists across launches, so there is no "paired" state
+/// here: the paired card shows whenever the controller has a remembered device.
+enum _PairState { idle, scanning, selecting }
 
-/// Drives the scan / pair / sync flow through the [ThermometerService]
-/// interface, so it works with the fake and the real BLE implementation alike.
+/// Drives the scan / pair / sync flow through the [AppController], which owns the
+/// [ThermometerService] and the persisted paired device, so it works with the
+/// fake and the real BLE implementation alike.
 class DevicePairingSection extends StatefulWidget {
-  final ThermometerService thermometer;
+  final AppController controller;
 
-  const DevicePairingSection({super.key, required this.thermometer});
+  const DevicePairingSection({super.key, required this.controller});
 
   @override
   State<DevicePairingSection> createState() => _DevicePairingSectionState();
@@ -57,100 +63,221 @@ class DevicePairingSection extends StatefulWidget {
 class _DevicePairingSectionState extends State<DevicePairingSection> {
   _PairState _state = _PairState.idle;
   List<DiscoveredThermometer> _found = const [];
-  DiscoveredThermometer? _paired;
-  int? _batteryPercent;
+  bool _syncing = false;
+  ThermometerStatus _status = const ThermometerStatus();
+  ThermometerSession? _session;
+  StreamSubscription<ThermometerStatus>? _statusSub;
+  StreamSubscription<List<DiscoveredThermometer>>? _scanSub;
+
+  ThermometerService get _thermometer => widget.controller.thermometer;
+  bool get _connected => _status.connected;
+
+  @override
+  void initState() {
+    super.initState();
+    // The paired device may load asynchronously, so react to the controller to
+    // open the connection once it appears.
+    widget.controller.addListener(_syncSession);
+    _syncSession();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncSession);
+    _scanSub?.cancel();
+    unawaited(_closeSession());
+    super.dispose();
+  }
+
+  /// Keep a live connection open exactly while the paired card is the visible
+  /// view; the session holds one link open and reconnects on its own.
+  void _syncSession() {
+    final device = widget.controller.pairedDevice;
+    final shouldConnect = device != null && _state == _PairState.idle;
+    if (shouldConnect) {
+      if (_session == null) {
+        final session = _thermometer.openSession(device.id);
+        _session = session;
+        _statusSub = session.status.listen((status) {
+          if (mounted) {
+            setState(() => _status = status);
+          }
+        });
+      }
+    } else {
+      unawaited(_closeSession());
+    }
+  }
+
+  /// Tear down the session and wait for it to release the radio, so a following
+  /// scan is not sabotaged by the connection's async teardown.
+  Future<void> _closeSession() async {
+    await _statusSub?.cancel();
+    _statusSub = null;
+    final session = _session;
+    _session = null;
+    _status = const ThermometerStatus();
+    await session?.close();
+  }
 
   Future<void> _scan() async {
-    setState(() => _state = _PairState.scanning);
-    final devices = await widget.thermometer.scan().first;
+    await _closeSession();
     if (!mounted) {
       return;
     }
     setState(() {
-      _found = devices;
-      _state = _PairState.selecting;
+      _state = _PairState.scanning;
+      _found = const [];
     });
+    // The scan emits the growing list of devices as they advertise, so listen
+    // rather than take the first (empty) emission; the stream ends when the scan
+    // times out.
+    _scanSub?.cancel();
+    _scanSub = _thermometer.scan().listen(
+      (devices) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _found = devices;
+          // Keep showing the searching spinner until a device actually appears;
+          // the results stream emits an empty list first while the scan runs.
+          if (devices.isNotEmpty) {
+            _state = _PairState.selecting;
+          }
+        });
+      },
+      onError: (Object error) {
+        if (mounted) {
+          setState(() => _state = _PairState.selecting);
+          _showError(error);
+        }
+      },
+      onDone: () {
+        if (mounted && _state == _PairState.scanning) {
+          setState(() => _state = _PairState.selecting);
+        }
+      },
+      cancelOnError: true,
+    );
   }
 
   Future<void> _pair(DiscoveredThermometer device) async {
-    final pin = await _askPin();
-    if (pin == null) {
-      return;
-    }
-    await widget.thermometer.pair(device, pin);
+    // Stop the discovery scan so the pairing connect can own the radio.
+    await _scanSub?.cancel();
     if (!mounted) {
       return;
     }
-    setState(() {
-      _paired = device;
-      _state = _PairState.paired;
-    });
+    // Bonding is driven by the platform: a system pairing dialog appears and the
+    // thermometer shows a six-digit passkey to type into it. Hint at that first,
+    // since the app cannot collect the passkey itself.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Confirm pairing in the system dialog, entering the code shown on the thermometer.',
+        ),
+      ),
+    );
+    try {
+      await _thermometer.pair(device);
+    } on Object catch (error) {
+      if (mounted) {
+        _showError(error);
+      }
+      return;
+    }
+    await widget.controller.rememberPairedDevice(device);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _state = _PairState.idle);
+    // Open the maintained connection to the freshly paired device.
+    _syncSession();
   }
 
   Future<void> _sync() async {
-    final device = _paired;
-    if (device == null) {
+    final session = _session;
+    if (session == null || !_connected) {
       return;
     }
-    final result = await widget.thermometer.sync(device);
-    if (!mounted) {
-      return;
+    setState(() => _syncing = true);
+    try {
+      final result = await session.sync();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Synced ${result.measurements.length} measurements'),
+        ),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        _showError(error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _syncing = false);
+      }
     }
-    setState(() => _batteryPercent = result.batteryPercent);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Synced ${result.measurements.length} measurements'),
-      ),
-    );
   }
 
-  Future<String?> _askPin() {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter device PIN'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          decoration: const InputDecoration(hintText: '6-digit PIN on display'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Pair'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _forget() async {
+    await _closeSession();
+    await widget.controller.forgetPairedDevice();
+    if (mounted) {
+      setState(() => _state = _PairState.idle);
+    }
+  }
+
+  void _showError(Object error) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error.toString())));
   }
 
   @override
   Widget build(BuildContext context) {
-    return switch (_state) {
-      _PairState.idle => _idle(),
-      _PairState.scanning => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Text('Searching for thermometers…'),
-          ],
-        ),
+    // Rebuild when the persisted paired device changes, so the paired card
+    // appears after pairing and after a restart, and disappears on forget.
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final paired = widget.controller.pairedDevice;
+        return switch (_state) {
+          _PairState.scanning => _scanning(),
+          _PairState.selecting => _selecting(),
+          _PairState.idle => paired != null ? _pairedCard(paired) : _idle(),
+        };
+      },
+    );
+  }
+
+  Widget _scanning() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('Searching for thermometers…'),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Press the button on your thermometer to wake it.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ],
       ),
-      _PairState.selecting => _selecting(),
-      _PairState.paired => _pairedCard(),
-    };
+    );
   }
 
   Widget _idle() {
@@ -183,30 +310,65 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
     );
   }
 
-  Widget _pairedCard() {
-    final device = _paired!;
+  Widget _pairedCard(DiscoveredThermometer device) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(device.name, style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    device.name,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                _connectionChip(),
+              ],
+            ),
             Text(device.id, style: Theme.of(context).textTheme.bodySmall),
-            if (_batteryPercent != null) ...[
+            // The battery reading is known only while connected.
+            if (_connected && _status.batteryPercent != null) ...[
+              const SizedBox(height: 10),
+              _batteryBar(_status.batteryPercent!),
+            ],
+            if (!_connected && !_syncing) ...[
               const SizedBox(height: 8),
-              Text('Battery: $_batteryPercent%'),
+              Text(
+                'Press the button on your thermometer to wake it; it connects '
+                'automatically and stays connected.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
             const SizedBox(height: 12),
             Row(
               children: [
-                FilledButton(onPressed: _sync, child: const Text('Sync now')),
-                const SizedBox(width: 8),
+                // Sync is available only over an open connection.
+                if (_connected || _syncing)
+                  FilledButton(
+                    onPressed: _syncing || !_connected ? null : _sync,
+                    child: _syncing
+                        ? const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text('Syncing…'),
+                            ],
+                          )
+                        : const Text('Sync now'),
+                  ),
+                if (_connected || _syncing) const SizedBox(width: 8),
                 TextButton(
-                  onPressed: () => setState(() {
-                    _paired = null;
-                    _state = _PairState.idle;
-                  }),
+                  onPressed: _syncing ? null : _forget,
                   child: const Text('Forget'),
                 ),
               ],
@@ -215,5 +377,77 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
         ),
       ),
     );
+  }
+
+  /// Battery level as a coloured progress bar with a percentage, matching the
+  /// mock: green above 50%, amber above 20%, red below.
+  Widget _batteryBar(int percent) {
+    final color = percent > 50
+        ? const Color(0xFF2FAE7A)
+        : percent > 20
+        ? const Color(0xFFF0A641)
+        : const Color(0xFFE5544E);
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: percent / 100,
+              minHeight: 7,
+              color: color,
+              backgroundColor: Theme.of(context).dividerColor,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          '$percent%',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  /// A dot, label, and signal-strength icon showing whether the maintained
+  /// connection to the thermometer is currently up.
+  Widget _connectionChip() {
+    final color = _connected ? Colors.green : Theme.of(context).disabledColor;
+    final rssi = _status.rssi;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          _connected ? 'Connected' : 'Waiting…',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (_connected && rssi != null) ...[
+          const SizedBox(width: 6),
+          Icon(_signalIcon(rssi), size: 16, color: color),
+          const SizedBox(width: 2),
+          Text('$rssi dBm', style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ],
+    );
+  }
+
+  /// Pick a signal-strength icon from the RSSI: stronger (closer to 0) is more
+  /// bars. Typical BLE ranges from about -40 dBm (very close) to -100 (far).
+  IconData _signalIcon(int rssi) {
+    if (rssi >= -60) {
+      return Icons.signal_cellular_alt;
+    }
+    if (rssi >= -75) {
+      return Icons.signal_cellular_alt_2_bar;
+    }
+    return Icons.signal_cellular_alt_1_bar;
   }
 }

@@ -32,8 +32,11 @@ const List<double> kChartGridTemperatures = [
 /// Y coordinate for [temperature] within a plot [plotHeight] pixels tall, using
 /// the same scale as the graph. Lets the axis gutter align its labels with the
 /// grid lines the painter draws.
-double chartTempToY(double temperature, double plotHeight) =>
-    _scaleTempToY(temperature, kChartHeaderHeight, plotHeight - kChartBottomPad);
+double chartTempToY(double temperature, double plotHeight) => _scaleTempToY(
+  temperature,
+  kChartHeaderHeight,
+  plotHeight - kChartBottomPad,
+);
 
 double _scaleTempToY(double temperature, double top, double bottom) {
   final clamped = temperature.clamp(_tempMin, _tempMax);

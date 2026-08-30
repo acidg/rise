@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../ble/thermometer_service.dart';
 import '../data/entry_repository.dart';
+import '../data/paired_device_store.dart';
 import '../domain/fertility/cycle_analysis.dart';
 import '../domain/fertility/fertility_window.dart';
 import '../domain/models/cycle.dart';
@@ -16,13 +17,15 @@ import 'chart/chart_day.dart';
 class AppController extends ChangeNotifier {
   final EntryRepository repository;
   final ThermometerService thermometer;
+  final PairedDeviceStore pairedDeviceStore;
   final CycleAnalysis analysis;
 
   AppController({
     required this.repository,
     required this.thermometer,
+    PairedDeviceStore? pairedDeviceStore,
     this.analysis = const CycleAnalysis(),
-  });
+  }) : pairedDeviceStore = pairedDeviceStore ?? InMemoryPairedDeviceStore();
 
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
@@ -30,14 +33,33 @@ class AppController extends ChangeNotifier {
   List<ChartDay> _days = const [];
   List<ChartDay> get days => _days;
 
+  DiscoveredThermometer? _pairedDevice;
+  DiscoveredThermometer? get pairedDevice => _pairedDevice;
+
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
-  /// Load entries and compute the chart days.
+  /// Load entries, the remembered paired device, and compute the chart days.
   Future<void> load() async {
     final entries = await repository.loadAll();
     _days = _buildChartDays(entries);
+    _pairedDevice = await pairedDeviceStore.load();
     _loaded = true;
+    notifyListeners();
+  }
+
+  /// Remember [device] as the paired thermometer, persisting it across launches.
+  Future<void> rememberPairedDevice(DiscoveredThermometer device) async {
+    await pairedDeviceStore.save(device);
+    _pairedDevice = device;
+    notifyListeners();
+  }
+
+  /// Forget the paired thermometer. The operating system keeps the BLE bond, so
+  /// re-pairing does not require entering the passkey again.
+  Future<void> forgetPairedDevice() async {
+    await pairedDeviceStore.clear();
+    _pairedDevice = null;
     notifyListeners();
   }
 

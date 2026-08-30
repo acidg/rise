@@ -7,6 +7,12 @@ class OvyGatt {
   OvyGatt._();
 
   static const String advertisedName = 'Ovy OT35';
+
+  /// Bluetooth SIG company identifier in the advertisement's manufacturer data.
+  /// The most reliable discriminator, since the OT35 advertisement carries this
+  /// even when it omits the local name and the custom service UUID.
+  static const int manufacturerId = 0x0611;
+
   static const String customService = 'fff0';
   static const String dataOut = 'fff1'; // measurement records (indicate)
   static const String dataOut2 = 'fff2'; // secondary data channel (indicate)

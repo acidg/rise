@@ -195,7 +195,10 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
               suffixText: '°C',
               border: OutlineInputBorder(),
               isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
             ),
             onChanged: (value) {
               final parsed = double.tryParse(value.replaceAll(',', '.'));
