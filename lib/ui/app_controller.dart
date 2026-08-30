@@ -12,6 +12,36 @@ import '../domain/models/cycle.dart';
 import '../domain/models/day_entry.dart';
 import 'chart/chart_day.dart';
 
+/// A synced reading that disagrees with a temperature already stored for its day.
+/// Surfaced by [AppController.importMeasurements] so the caller can ask the user
+/// whether to overwrite before the stored value is replaced.
+class TemperatureConflict {
+  /// The calendar day (local midnight) both readings belong to.
+  final DateTime day;
+
+  /// The temperature already stored for the day, and when it was taken (null if
+  /// that moment was never recorded).
+  final double existing;
+  final DateTime? existingAt;
+
+  /// The temperature the thermometer reported, and when it was taken.
+  final double incoming;
+  final DateTime incomingAt;
+
+  const TemperatureConflict({
+    required this.day,
+    required this.existing,
+    required this.existingAt,
+    required this.incoming,
+    required this.incomingAt,
+  });
+}
+
+/// Decides whether a diverging synced reading should overwrite the stored one:
+/// returns true to overwrite, false to keep the existing value.
+typedef TemperatureConflictResolver =
+    Future<bool> Function(TemperatureConflict conflict);
+
 /// Holds the loaded chart data and app-wide settings, and mediates edits and
 /// device syncs. A [ChangeNotifier] so screens rebuild on change; its
 /// collaborators are all interfaces, so it can be driven by fakes in tests.
@@ -74,7 +104,16 @@ class AppController extends ChangeNotifier {
   /// preserving any signs the user already logged for those days. Basal
   /// temperature is a single morning reading, so if the device returns more than
   /// one measurement for a day the earliest is kept.
-  Future<void> importMeasurements(List<Measurement> measurements) async {
+  ///
+  /// A day whose stored temperature differs from the synced one is a conflict:
+  /// [resolveConflict] is consulted for each such day and the reading is written
+  /// only if it returns true. Days with no stored temperature (or an identical
+  /// one) are applied without asking. With no resolver, conflicting days are left
+  /// untouched, so an existing value is never overwritten silently.
+  Future<void> importMeasurements(
+    List<Measurement> measurements, {
+    TemperatureConflictResolver? resolveConflict,
+  }) async {
     if (measurements.isEmpty) {
       return;
     }
@@ -89,16 +128,49 @@ class AppController extends ChangeNotifier {
         byDay[day] = measurement;
       }
     }
+    var changed = false;
     for (final MapEntry(key: day, value: measurement) in byDay.entries) {
       final base = existing[day] ?? DayEntry(date: day);
+      if (!await _shouldApply(base, measurement, resolveConflict)) {
+        continue;
+      }
       await repository.save(
         base.copyWith(
           temperature: measurement.celsius,
           temperatureAt: measurement.timestamp,
         ),
       );
+      changed = true;
     }
-    await load();
+    if (changed) {
+      await load();
+    }
+  }
+
+  /// Whether [measurement] should overwrite [base]. A day with no stored
+  /// temperature, or one that already matches, is applied outright; a divergent
+  /// value is applied only when [resolveConflict] confirms it.
+  Future<bool> _shouldApply(
+    DayEntry base,
+    Measurement measurement,
+    TemperatureConflictResolver? resolveConflict,
+  ) async {
+    final stored = base.temperature;
+    if (stored == null || stored == measurement.celsius) {
+      return true;
+    }
+    if (resolveConflict == null) {
+      return false;
+    }
+    return resolveConflict(
+      TemperatureConflict(
+        day: _dateKey(measurement.timestamp),
+        existing: stored,
+        existingAt: base.temperatureAt,
+        incoming: measurement.celsius,
+        incomingAt: measurement.timestamp,
+      ),
+    );
   }
 
   static DateTime _dateKey(DateTime date) =>

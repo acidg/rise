@@ -203,7 +203,10 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
     setState(() => _syncing = true);
     try {
       final result = await session.sync();
-      await widget.controller.importMeasurements(result.measurements);
+      await widget.controller.importMeasurements(
+        result.measurements,
+        resolveConflict: _confirmOverwrite,
+      );
       if (!mounted) {
         return;
       }
@@ -222,6 +225,50 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
       }
     }
   }
+
+  /// Ask the user whether a synced reading should overwrite the temperature
+  /// already stored for its day. Returns false (keep the stored value) when the
+  /// screen is gone or the dialog is dismissed, so a reading is never overwritten
+  /// without an explicit yes.
+  Future<bool> _confirmOverwrite(TemperatureConflict conflict) async {
+    if (!mounted) {
+      return false;
+    }
+    final materialLocalizations = MaterialLocalizations.of(context);
+    final existingAt = conflict.existingAt;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Overwrite temperature?'),
+        content: Text(
+          'On ${materialLocalizations.formatMediumDate(conflict.day)} '
+          'you already have ${_formatTemperature(conflict.existing)}'
+          '${existingAt == null ? '' : ' at ${_formatTime(existingAt)}'} '
+          'recorded. The thermometer reported '
+          '${_formatTemperature(conflict.incoming)} at '
+          '${_formatTime(conflict.incomingAt)}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep existing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Overwrite'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  String _formatTemperature(double celsius) =>
+      '${celsius.toStringAsFixed(2)} °C';
+
+  String _formatTime(DateTime at) => MaterialLocalizations.of(
+    context,
+  ).formatTimeOfDay(TimeOfDay.fromDateTime(at));
 
   Future<void> _forget() async {
     await _closeSession();
