@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../ble/measurement.dart';
 import '../ble/thermometer_service.dart';
+import '../data/day_entry_csv.dart';
 import '../data/entry_repository.dart';
 import '../data/paired_device_store.dart';
 import '../domain/fertility/cycle_analysis.dart';
@@ -46,6 +47,47 @@ class TemperatureConflict {
 /// returns true to overwrite, false to keep the existing value.
 typedef TemperatureConflictResolver =
     Future<bool> Function(TemperatureConflict conflict);
+
+/// An imported day that already exists in the history with different contents.
+/// Surfaced by [AppController.importCsv] so the caller can ask the user whether
+/// the imported entry should replace the stored one.
+class EntryConflict {
+  /// The entry currently stored for the day.
+  final DayEntry existing;
+
+  /// The entry read from the imported file, for the same calendar day.
+  final DayEntry incoming;
+
+  const EntryConflict({required this.existing, required this.incoming});
+
+  /// The calendar day (local midnight) both entries belong to.
+  DateTime get day => DateTime(
+    existing.date.year,
+    existing.date.month,
+    existing.date.day,
+  );
+}
+
+/// Decides whether an imported entry should replace the differing stored one:
+/// returns true to replace, false to keep the existing entry.
+typedef EntryConflictResolver = Future<bool> Function(EntryConflict conflict);
+
+/// Outcome of an import: how many days were newly added, replaced an existing
+/// (differing) day, or left unchanged because they matched or the user kept the
+/// stored version.
+class ImportResult {
+  final int added;
+  final int replaced;
+  final int skipped;
+
+  const ImportResult({
+    this.added = 0,
+    this.replaced = 0,
+    this.skipped = 0,
+  });
+
+  int get total => added + replaced + skipped;
+}
 
 /// Holds the loaded chart data and app-wide settings, and mediates edits and
 /// device syncs. A [ChangeNotifier] so screens rebuild on change; its
@@ -249,6 +291,68 @@ class AppController extends ChangeNotifier {
     if (changed) {
       await load();
     }
+  }
+
+  /// Serialise the whole day history to CSV for the user to back up or move to
+  /// another device. The paired thermometer is device-specific and is not part of
+  /// the history, so it is never included.
+  Future<String> exportCsv() async {
+    final entries = await repository.loadAll();
+    return DayEntryCsv.encode(entries);
+  }
+
+  /// Import day entries from a CSV document produced by [exportCsv] (or an
+  /// equivalent spreadsheet export) and refresh the chart.
+  ///
+  /// A day absent from the history is added. A day whose imported entry matches
+  /// the stored one is left untouched. A day that exists with different contents
+  /// is a conflict: [resolveConflict] is consulted and the imported entry is
+  /// written only if it returns true. With no resolver, conflicting days are kept
+  /// as stored, so importing never overwrites diverging data silently.
+  ///
+  /// Throws [FormatException] when the CSV cannot be parsed (see
+  /// [DayEntryCsv.decode]).
+  Future<ImportResult> importCsv(
+    String csv, {
+    EntryConflictResolver? resolveConflict,
+  }) async {
+    final incoming = DayEntryCsv.decode(csv);
+    if (incoming.isEmpty) {
+      return const ImportResult();
+    }
+    final existing = {
+      for (final entry in await repository.loadAll()) _dateKey(entry.date): entry,
+    };
+    var added = 0;
+    var replaced = 0;
+    var skipped = 0;
+    for (final entry in incoming) {
+      final stored = existing[_dateKey(entry.date)];
+      if (stored == null) {
+        await repository.save(entry);
+        added++;
+        continue;
+      }
+      if (stored == entry) {
+        skipped++;
+        continue;
+      }
+      final replace =
+          resolveConflict != null &&
+          await resolveConflict(
+            EntryConflict(existing: stored, incoming: entry),
+          );
+      if (replace) {
+        await repository.save(entry);
+        replaced++;
+      } else {
+        skipped++;
+      }
+    }
+    if (added > 0 || replaced > 0) {
+      await load();
+    }
+    return ImportResult(added: added, replaced: replaced, skipped: skipped);
   }
 
   /// Whether [measurement] should overwrite [base]. A day with no stored

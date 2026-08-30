@@ -36,6 +36,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_blue_plus: ^2.3.12
   shared_preferences: ^2.5.5
+  # Import picks a CSV via the system open-document dialog; export writes one via
+  # the system create-document dialog. Both are plain platform-channel plugins
+  # (no JNI), so they build against the pinned Nix Android SDK.
+  file_selector: ^1.1.0
+  flutter_file_dialog: ^3.3.2
 
 dev_dependencies:
   flutter_test:

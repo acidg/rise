@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../ble/thermometer_service.dart';
 import '../app_controller.dart';
 import '../temperature_conflict_dialog.dart';
+import 'data_section.dart';
 
 /// Settings: appearance (theme) and thermometer pairing.
 class SettingsScreen extends StatelessWidget {
@@ -38,6 +39,10 @@ class SettingsScreen extends StatelessWidget {
           Text('Thermometer', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           DevicePairingSection(controller: controller),
+          const SizedBox(height: 28),
+          Text('Data', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          DataSection(controller: controller),
         ],
       ),
     );

@@ -107,6 +107,44 @@ class DayEntry {
     );
   }
 
+  /// Value equality over every logged field, so two entries loaded for the same
+  /// day compare equal when their contents match. Used by import to tell an
+  /// unchanged day from a genuine conflict. [date] is compared by calendar day,
+  /// matching how entries are keyed.
+  @override
+  bool operator ==(Object other) {
+    return other is DayEntry &&
+        _dateKey(other.date) == _dateKey(date) &&
+        other.temperature == temperature &&
+        other.temperatureAt == temperatureAt &&
+        other.menstruation == menstruation &&
+        other.mucus == mucus &&
+        other.cervix == cervix &&
+        other.pain == pain &&
+        other.mood == mood &&
+        other.libido == libido &&
+        other.intercourse == intercourse &&
+        other.notes == notes;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    _dateKey(date),
+    temperature,
+    temperatureAt,
+    menstruation,
+    mucus,
+    cervix,
+    pain,
+    mood,
+    libido,
+    intercourse,
+    notes,
+  );
+
+  static DateTime _dateKey(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
   DayEntry copyWith({
     double? temperature,
     DateTime? temperatureAt,
