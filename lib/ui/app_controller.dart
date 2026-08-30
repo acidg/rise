@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../ble/measurement.dart';
 import '../ble/thermometer_service.dart';
 import '../data/entry_repository.dart';
 import '../data/paired_device_store.dart';
@@ -68,6 +69,35 @@ class AppController extends ChangeNotifier {
     await repository.save(entry);
     await load();
   }
+
+  /// Fold synced [measurements] into day entries and refresh the chart,
+  /// preserving any signs the user already logged for those days. Basal
+  /// temperature is a single morning reading, so if the device returns more than
+  /// one measurement for a day the earliest is kept.
+  Future<void> importMeasurements(List<Measurement> measurements) async {
+    if (measurements.isEmpty) {
+      return;
+    }
+    final existing = {
+      for (final entry in await repository.loadAll()) _dateKey(entry.date): entry,
+    };
+    final byDay = <DateTime, Measurement>{};
+    for (final measurement in measurements) {
+      final day = _dateKey(measurement.timestamp);
+      final current = byDay[day];
+      if (current == null || measurement.timestamp.isBefore(current.timestamp)) {
+        byDay[day] = measurement;
+      }
+    }
+    for (final MapEntry(key: day, value: measurement) in byDay.entries) {
+      final base = existing[day] ?? DayEntry(date: day);
+      await repository.save(base.copyWith(temperature: measurement.celsius));
+    }
+    await load();
+  }
+
+  static DateTime _dateKey(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;

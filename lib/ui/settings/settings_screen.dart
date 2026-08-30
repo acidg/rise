@@ -203,6 +203,7 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
     setState(() => _syncing = true);
     try {
       final result = await session.sync();
+      await widget.controller.importMeasurements(result.measurements);
       if (!mounted) {
         return;
       }

@@ -1,5 +1,19 @@
 import 'signs.dart';
 
+/// Look up an enum member by its [Enum.name], returning null when the stored
+/// value is absent or no longer maps to a known member.
+T? _enumByName<T extends Enum>(List<T> values, Object? name) {
+  if (name is! String) {
+    return null;
+  }
+  for (final value in values) {
+    if (value.name == name) {
+      return value;
+    }
+  }
+  return null;
+}
+
 /// One day's logged data, keyed by its calendar [date].
 ///
 /// This is the raw record as measured or entered by the user; cycle grouping and
@@ -40,6 +54,48 @@ class DayEntry {
         menstruation != Menstruation.none ||
         mucus.isPresent ||
         pain != Pain.none;
+  }
+
+  /// Serialise to a JSON-compatible map. Enums are stored by name so the wire
+  /// form stays stable and readable if their declaration order ever changes.
+  /// The date is normalised to its calendar day, matching how entries are keyed.
+  Map<String, dynamic> toJson() {
+    return {
+      'date': DateTime(date.year, date.month, date.day).toIso8601String(),
+      'temperature': temperature,
+      'menstruation': menstruation.name,
+      'mucus': mucus.name,
+      'cervix': cervix?.name,
+      'pain': pain.name,
+      'mood': mood?.name,
+      'libido': libido.name,
+      'intercourse': intercourse.name,
+      'notes': notes,
+    };
+  }
+
+  /// Rebuild an entry from [toJson]. Unknown or missing enum values fall back to
+  /// the field default, so an older stored history stays readable after the enums
+  /// gain new members.
+  factory DayEntry.fromJson(Map<String, dynamic> json) {
+    return DayEntry(
+      date: DateTime.parse(json['date'] as String),
+      temperature: (json['temperature'] as num?)?.toDouble(),
+      menstruation:
+          _enumByName(Menstruation.values, json['menstruation']) ??
+          Menstruation.none,
+      mucus:
+          _enumByName(CervicalMucus.values, json['mucus']) ??
+          CervicalMucus.none,
+      cervix: _enumByName(Cervix.values, json['cervix']),
+      pain: _enumByName(Pain.values, json['pain']) ?? Pain.none,
+      mood: _enumByName(Mood.values, json['mood']),
+      libido: _enumByName(Libido.values, json['libido']) ?? Libido.none,
+      intercourse:
+          _enumByName(Intercourse.values, json['intercourse']) ??
+          Intercourse.none,
+      notes: json['notes'] as String? ?? '',
+    );
   }
 
   DayEntry copyWith({
