@@ -26,7 +26,6 @@ class DayDetailSheet extends StatefulWidget {
 }
 
 class _DayDetailSheetState extends State<DayDetailSheet> {
-  late double _temperature;
   late final TextEditingController _temperatureController;
   TimeOfDay? _temperatureTime;
   late Menstruation _menstruation;
@@ -38,13 +37,24 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
   late Intercourse _intercourse;
   late final TextEditingController _notes;
 
+  /// Whether the user changed anything. Edits are saved when the sheet closes
+  /// (by button, drag, or tapping outside); an untouched sheet saves nothing, so
+  /// merely viewing a day never writes a value.
+  bool _dirty = false;
+
+  /// Whether the temperature field itself was touched. Guards against writing the
+  /// placeholder temperature to a day that only had other signs logged.
+  bool _temperatureTouched = false;
+
+  bool _persisted = false;
+
   @override
   void initState() {
     super.initState();
     final entry = widget.entry;
-    _temperature = entry.temperature ?? _defaultTemperature;
+    // A day with no measurement shows a blank field, not a placeholder value.
     _temperatureController = TextEditingController(
-      text: _temperature.toStringAsFixed(2),
+      text: entry.temperature?.toStringAsFixed(2) ?? '',
     );
     final measuredAt = entry.temperatureAt;
     _temperatureTime = measuredAt == null
@@ -58,51 +68,80 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     _libido = entry.libido;
     _intercourse = entry.intercourse;
     _notes = TextEditingController(text: entry.notes);
+    _notes.addListener(_markDirty);
   }
 
   @override
   void dispose() {
+    // Persist edits made when the sheet is dismissed without the Save button.
+    _persist();
     _temperatureController.dispose();
     _notes.dispose();
     super.dispose();
   }
 
-  /// The temperature currently in the text field, falling back to the last
-  /// valid value when the field holds an incomplete or unparseable entry.
-  double get _currentTemperature =>
-      double.tryParse(_temperatureController.text.replaceAll(',', '.')) ??
-      _temperature;
+  void _markDirty() => _dirty = true;
 
-  /// Adjust the temperature by [delta] from the value currently shown and
-  /// rewrite the field, keeping it to two decimals.
+  /// The temperature currently parsed from the field, or null when the field is
+  /// blank or holds an incomplete/unparseable entry.
+  double? get _fieldTemperature =>
+      double.tryParse(_temperatureController.text.replaceAll(',', '.'));
+
+  /// Adjust the temperature by [delta] from the value currently shown, keeping it
+  /// to two decimals. Stepping from a blank field seeds the default first, so the
+  /// first press reveals a starting value rather than jumping past it.
   void _step(double delta) {
-    final next = double.parse((_currentTemperature + delta).toStringAsFixed(2));
+    final current = _fieldTemperature;
+    final next = current == null
+        ? _defaultTemperature
+        : double.parse((current + delta).toStringAsFixed(2));
     setState(() {
-      _temperature = next;
       _temperatureController.text = next.toStringAsFixed(2);
+      _dirty = true;
+      _temperatureTouched = true;
     });
   }
 
-  void _save() {
+  /// Build the entry from the current field values. The placeholder temperature
+  /// is only written if the field was actually touched or the day already had a
+  /// temperature, so saving a day edited for other signs does not invent one.
+  DayEntry _edited() {
     final date = widget.entry.date;
     final time = _temperatureTime;
     final measuredAt = time == null
         ? null
         : DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    widget.onSave(
-      widget.entry.copyWith(
-        temperature: _currentTemperature,
-        temperatureAt: measuredAt,
-        menstruation: _menstruation,
-        mucus: _mucus,
-        cervix: _cervix,
-        pain: _pain,
-        mood: _mood,
-        libido: _libido,
-        intercourse: _intercourse,
-        notes: _notes.text,
-      ),
+    // Keep the day free of a temperature unless one is actually present: the
+    // field was touched and holds a value, or the day already had a reading.
+    final temperature = _fieldTemperature ?? widget.entry.temperature;
+    final hasTemperature =
+        _temperatureTouched || widget.entry.temperature != null;
+    return widget.entry.copyWith(
+      temperature: hasTemperature ? temperature : null,
+      temperatureAt: measuredAt,
+      menstruation: _menstruation,
+      mucus: _mucus,
+      cervix: _cervix,
+      pain: _pain,
+      mood: _mood,
+      libido: _libido,
+      intercourse: _intercourse,
+      notes: _notes.text,
     );
+  }
+
+  /// Save the edits once. [force] saves even when nothing changed, for the
+  /// explicit Save button; dismissal only saves when something changed.
+  void _persist({bool force = false}) {
+    if (_persisted || (!force && !_dirty)) {
+      return;
+    }
+    _persisted = true;
+    widget.onSave(_edited());
+  }
+
+  void _save() {
+    _persist(force: true);
     Navigator.of(context).pop();
   }
 
@@ -196,7 +235,10 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
       helpText: 'Measurement time',
     );
     if (picked != null) {
-      setState(() => _temperatureTime = picked);
+      setState(() {
+        _temperatureTime = picked;
+        _dirty = true;
+      });
     }
   }
 
@@ -222,11 +264,9 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
                 vertical: 12,
               ),
             ),
-            onChanged: (value) {
-              final parsed = double.tryParse(value.replaceAll(',', '.'));
-              if (parsed != null) {
-                _temperature = parsed;
-              }
+            onChanged: (_) {
+              _dirty = true;
+              _temperatureTouched = true;
             },
           ),
         ),
@@ -281,7 +321,10 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
                 ChoiceChip(
                   label: Text(label(value)),
                   selected: value == selected,
-                  onSelected: (_) => onSelected(value),
+                  onSelected: (_) {
+                    _markDirty();
+                    onSelected(value);
+                  },
                 ),
             ],
           ),
