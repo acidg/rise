@@ -91,7 +91,12 @@ class AppController extends ChangeNotifier {
     }
     for (final MapEntry(key: day, value: measurement) in byDay.entries) {
       final base = existing[day] ?? DayEntry(date: day);
-      await repository.save(base.copyWith(temperature: measurement.celsius));
+      await repository.save(
+        base.copyWith(
+          temperature: measurement.celsius,
+          temperatureAt: measurement.timestamp,
+        ),
+      );
     }
     await load();
   }

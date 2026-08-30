@@ -57,6 +57,8 @@ void main() {
 
       final first = controller.days.firstWhere((d) => d.date == logged);
       expect(first.temperature, 36.55);
+      // The measurement's time comes across from the device clock.
+      expect(first.entry.temperatureAt, DateTime(2026, 3, 1, 6, 30));
       // The sync must not clobber signs the user logged that day.
       expect(first.entry.menstruation, Menstruation.medium);
       final second = controller.days.firstWhere(

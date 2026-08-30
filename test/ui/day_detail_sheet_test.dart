@@ -65,4 +65,43 @@ void main() {
 
     expect(saved.temperature, 36.73);
   });
+
+  testWidgets('the synced measurement time is shown and kept on save', (
+    tester,
+  ) async {
+    final entry = DayEntry(
+      date: DateTime(2026, 3, 1),
+      temperature: 36.50,
+      temperatureAt: DateTime(2026, 3, 1, 6, 30),
+    );
+
+    final saved = await editAndSave(tester, entry, (t) async {
+      // A time is present, so the chip does not offer to add one.
+      expect(find.text('Add time'), findsNothing);
+    });
+
+    // Saving without touching the time preserves it.
+    expect(saved.temperatureAt, DateTime(2026, 3, 1, 6, 30));
+  });
+
+  testWidgets('a time can be added by hand when none was synced', (
+    tester,
+  ) async {
+    final entry = DayEntry(date: DateTime(2026, 3, 1), temperature: 36.50);
+
+    final saved = await editAndSave(tester, entry, (t) async {
+      expect(find.text('Add time'), findsOneWidget);
+      await t.tap(find.byKey(const Key('temperature-time')));
+      await t.pumpAndSettle();
+      // Confirm the picker's initial time.
+      await t.tap(find.text('OK'));
+      await t.pumpAndSettle();
+    });
+
+    // The picked time lands on the entry's own date.
+    expect(saved.temperatureAt, isNotNull);
+    expect(saved.temperatureAt!.year, 2026);
+    expect(saved.temperatureAt!.month, 3);
+    expect(saved.temperatureAt!.day, 1);
+  });
 }

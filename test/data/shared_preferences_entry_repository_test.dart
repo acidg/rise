@@ -19,6 +19,7 @@ void main() {
       DayEntry(
         date: DateTime(2026, 5, 4),
         temperature: 36.62,
+        temperatureAt: DateTime(2026, 5, 4, 6, 45),
         menstruation: Menstruation.medium,
         mucus: CervicalMucus.eggWhite,
         cervix: Cervix.highSoft,
@@ -38,6 +39,7 @@ void main() {
     final entry = loaded.single;
     expect(entry.date, DateTime(2026, 5, 4));
     expect(entry.temperature, 36.62);
+    expect(entry.temperatureAt, DateTime(2026, 5, 4, 6, 45));
     expect(entry.menstruation, Menstruation.medium);
     expect(entry.mucus, CervicalMucus.eggWhite);
     expect(entry.cervix, Cervix.highSoft);
@@ -57,6 +59,7 @@ void main() {
 
     expect(entry.cervix, isNull);
     expect(entry.mood, isNull);
+    expect(entry.temperatureAt, isNull);
   });
 
   test('re-saving a day replaces it, keyed by calendar date', () async {

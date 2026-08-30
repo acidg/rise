@@ -28,6 +28,7 @@ class DayDetailSheet extends StatefulWidget {
 class _DayDetailSheetState extends State<DayDetailSheet> {
   late double _temperature;
   late final TextEditingController _temperatureController;
+  TimeOfDay? _temperatureTime;
   late Menstruation _menstruation;
   late CervicalMucus _mucus;
   Cervix? _cervix;
@@ -45,6 +46,10 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     _temperatureController = TextEditingController(
       text: _temperature.toStringAsFixed(2),
     );
+    final measuredAt = entry.temperatureAt;
+    _temperatureTime = measuredAt == null
+        ? null
+        : TimeOfDay.fromDateTime(measuredAt);
     _menstruation = entry.menstruation;
     _mucus = entry.mucus;
     _cervix = entry.cervix;
@@ -79,9 +84,15 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
   }
 
   void _save() {
+    final date = widget.entry.date;
+    final time = _temperatureTime;
+    final measuredAt = time == null
+        ? null
+        : DateTime(date.year, date.month, date.day, time.hour, time.minute);
     widget.onSave(
       widget.entry.copyWith(
         temperature: _currentTemperature,
+        temperatureAt: measuredAt,
         menstruation: _menstruation,
         mucus: _mucus,
         cervix: _cervix,
@@ -178,6 +189,17 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     );
   }
 
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _temperatureTime ?? TimeOfDay.now(),
+      helpText: 'Measurement time',
+    );
+    if (picked != null) {
+      setState(() => _temperatureTime = picked);
+    }
+  }
+
   Widget _temperatureField(BuildContext context) {
     return Row(
       children: [
@@ -208,6 +230,8 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
             },
           ),
         ),
+        const SizedBox(width: 12),
+        _timeButton(context),
         const Spacer(),
         IconButton.filledTonal(
           onPressed: () => _step(-_temperatureStep),
@@ -219,6 +243,19 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
           icon: const Icon(Icons.add),
         ),
       ],
+    );
+  }
+
+  /// Shows the temperature's measurement time (from the sync or a prior edit) and
+  /// opens a picker to set it by hand. Reads "Add time" until one is set.
+  Widget _timeButton(BuildContext context) {
+    final time = _temperatureTime;
+    final label = time == null ? 'Add time' : time.format(context);
+    return ActionChip(
+      key: const Key('temperature-time'),
+      avatar: const Icon(Icons.schedule, size: 18),
+      label: Text(label),
+      onPressed: _pickTime,
     );
   }
 

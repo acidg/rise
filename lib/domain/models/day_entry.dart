@@ -20,10 +20,13 @@ T? _enumByName<T extends Enum>(List<T> values, Object? name) {
 /// fertility flags are derived elsewhere and never stored here. [date] is
 /// expected to be normalised to local midnight so it identifies a day.
 /// [temperature] is the basal body temperature in degrees Celsius, or null when
-/// no measurement exists for the day.
+/// no measurement exists for the day. [temperatureAt] is the moment that
+/// temperature was taken, filled from the thermometer's clock on sync or entered
+/// by hand; null when unknown.
 class DayEntry {
   final DateTime date;
   final double? temperature;
+  final DateTime? temperatureAt;
   final Menstruation menstruation;
   final CervicalMucus mucus;
   final Cervix? cervix;
@@ -36,6 +39,7 @@ class DayEntry {
   const DayEntry({
     required this.date,
     this.temperature,
+    this.temperatureAt,
     this.menstruation = Menstruation.none,
     this.mucus = CervicalMucus.none,
     this.cervix,
@@ -63,6 +67,7 @@ class DayEntry {
     return {
       'date': DateTime(date.year, date.month, date.day).toIso8601String(),
       'temperature': temperature,
+      'temperatureAt': temperatureAt?.toIso8601String(),
       'menstruation': menstruation.name,
       'mucus': mucus.name,
       'cervix': cervix?.name,
@@ -81,6 +86,10 @@ class DayEntry {
     return DayEntry(
       date: DateTime.parse(json['date'] as String),
       temperature: (json['temperature'] as num?)?.toDouble(),
+      temperatureAt: switch (json['temperatureAt']) {
+        final String at => DateTime.parse(at),
+        _ => null,
+      },
       menstruation:
           _enumByName(Menstruation.values, json['menstruation']) ??
           Menstruation.none,
@@ -100,6 +109,7 @@ class DayEntry {
 
   DayEntry copyWith({
     double? temperature,
+    DateTime? temperatureAt,
     Menstruation? menstruation,
     CervicalMucus? mucus,
     Cervix? cervix,
@@ -112,6 +122,7 @@ class DayEntry {
     return DayEntry(
       date: date,
       temperature: temperature ?? this.temperature,
+      temperatureAt: temperatureAt ?? this.temperatureAt,
       menstruation: menstruation ?? this.menstruation,
       mucus: mucus ?? this.mucus,
       cervix: cervix ?? this.cervix,
