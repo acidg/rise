@@ -276,3 +276,23 @@ img { display: block; max-width: 100%; }
 .disclaimer { color: var(--muted); font-size: 0.86rem; margin: 0 0 1rem; }
 
 .foot-meta { color: #6f7aa0; font-size: 0.82rem; margin: 0; }
+
+/* Mobile ------------------------------------------------------------- */
+
+/* On narrow screens the single-row nav runs out of width and the links
+   overlap. Let the bar wrap: the brand takes the first row, the links
+   flow centered onto the next. */
+@media (max-width: 720px) {
+  .nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 1.1rem;
+    padding: 1rem 1.1rem;
+  }
+
+  .brand {
+    flex-basis: 100%;
+    justify-content: center;
+    margin-right: 0;
+  }
+}
