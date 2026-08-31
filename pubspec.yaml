@@ -1,5 +1,5 @@
 name: rise
-description: "Rise - a privacy-first symptothermal fertility tracker that keeps orphaned BBT thermometers alive"
+description: "Rise - a privacy-first symptothermal fertility tracker that keeps the Ovy OT35 Bluetooth BBT thermometer usable after its app dropped older Android versions"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
