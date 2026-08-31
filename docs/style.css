@@ -221,33 +221,20 @@ img { display: block; max-width: 100%; }
 .phone { margin: 0; text-align: center; }
 
 .phone-screen {
-  width: 220px;
-  aspect-ratio: 9 / 19;
-  border-radius: 28px;
-  border: 1px solid var(--panel-border);
-  background: linear-gradient(160deg, rgba(138, 149, 198, 0.12), rgba(6, 11, 28, 0.4));
+  width: 232px;
+  aspect-ratio: 400 / 860;
+  border-radius: 30px;
+  border: 6px solid #1c243f;
+  background: #0b1024;
   box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.9);
-  padding: 10px;
+  overflow: hidden;
 }
 
-.phone-screen.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.phone-screen.placeholder span {
-  color: var(--muted);
-  font-size: 0.9rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px dashed var(--panel-border);
-  border-radius: 16px;
+.phone-screen img {
+  display: block;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: cover;
 }
 
 .phone figcaption { margin-top: 0.9rem; color: var(--muted); font-size: 0.96rem; }
