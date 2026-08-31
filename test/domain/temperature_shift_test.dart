@@ -22,6 +22,7 @@ void main() {
         expect(shift, isNotNull);
         expect(shift!.ovulationDay, 6);
         expect(shift.confirmationDay, 9); // third higher measurement
+        expect(shift.firstLowDay, 1); // six unbroken lows begin on day one
         expect(shift.coverline, 36.40);
         expect(shift.lowestHigherTemperature, 36.70);
       },
@@ -68,20 +69,55 @@ void main() {
       expect(shift!.ovulationDay, 7);
     });
 
+    test('a missing measurement in the low phase is bridged by reaching further '
+        'back for a sixth low', () {
+      final temps = <double?>[
+        36.40, 36.40, 36.40,
+        null, // no measurement during bleeding
+        36.40, 36.40, 36.40, // six measured lows span the gap (days 1-3, 5-7)
+        36.70, 36.80, 36.75, // three higher measurements
+      ];
+
+      final shift = detectTemperatureShift(temps);
+
+      expect(shift, isNotNull);
+      expect(shift!.ovulationDay, 7);
+      expect(shift.confirmationDay, 10);
+      // The coverline rests on six measured lows reached back over the gap, so
+      // the reference band opens on cycle day one, not ovulation day minus five.
+      expect(shift.firstLowDay, 1);
+      expect(shift.coverline, 36.40);
+    });
+
     test(
-      'a missing measurement inside the window blocks a false confirmation',
+      'a missing measurement between higher measurements is stepped over',
       () {
         final temps = <double?>[
-          36.40,
-          36.40,
-          36.40,
-          36.40,
-          36.40,
-          36.40,
+          36.40, 36.40, 36.40, 36.40, 36.40, 36.40,
           36.70,
-          null,
+          null, // a skipped day between higher measurements
+          36.70, 36.70, // still three measured highers above the coverline
+        ];
+
+        final shift = detectTemperatureShift(temps);
+
+        expect(shift, isNotNull);
+        expect(shift!.ovulationDay, 6);
+        // The third measured higher lands on cycle day ten, closing the window.
+        expect(shift.confirmationDay, 10);
+        expect(shift.coverline, 36.40);
+        expect(shift.lowestHigherTemperature, 36.70);
+      },
+    );
+
+    test(
+      'a measured value that falls back to the coverline breaks the rise',
+      () {
+        final temps = <double?>[
+          36.40, 36.40, 36.40, 36.40, 36.40, 36.40,
           36.70,
-          36.70,
+          36.40, // falls back to the coverline: not a sustained shift
+          36.70, 36.70,
         ];
 
         expect(detectTemperatureShift(temps), isNull);

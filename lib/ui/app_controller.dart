@@ -61,11 +61,8 @@ class EntryConflict {
   const EntryConflict({required this.existing, required this.incoming});
 
   /// The calendar day (local midnight) both entries belong to.
-  DateTime get day => DateTime(
-    existing.date.year,
-    existing.date.month,
-    existing.date.day,
-  );
+  DateTime get day =>
+      DateTime(existing.date.year, existing.date.month, existing.date.day);
 }
 
 /// Decides whether an imported entry should replace the differing stored one:
@@ -80,11 +77,7 @@ class ImportResult {
   final int replaced;
   final int skipped;
 
-  const ImportResult({
-    this.added = 0,
-    this.replaced = 0,
-    this.skipped = 0,
-  });
+  const ImportResult({this.added = 0, this.replaced = 0, this.skipped = 0});
 
   int get total => added + replaced + skipped;
 }
@@ -264,13 +257,15 @@ class AppController extends ChangeNotifier {
       return;
     }
     final existing = {
-      for (final entry in await repository.loadAll()) _dateKey(entry.date): entry,
+      for (final entry in await repository.loadAll())
+        _dateKey(entry.date): entry,
     };
     final byDay = <DateTime, Measurement>{};
     for (final measurement in measurements) {
       final day = _dateKey(measurement.timestamp);
       final current = byDay[day];
-      if (current == null || measurement.timestamp.isBefore(current.timestamp)) {
+      if (current == null ||
+          measurement.timestamp.isBefore(current.timestamp)) {
         byDay[day] = measurement;
       }
     }
@@ -321,7 +316,8 @@ class AppController extends ChangeNotifier {
       return const ImportResult();
     }
     final existing = {
-      for (final entry in await repository.loadAll()) _dateKey(entry.date): entry,
+      for (final entry in await repository.loadAll())
+        _dateKey(entry.date): entry,
     };
     var added = 0;
     var replaced = 0;
@@ -398,13 +394,14 @@ class AppController extends ChangeNotifier {
       final days = cycle.days;
       for (var i = 0; i < days.length; i++) {
         final cycleDay = i + 1;
-        // The reference lines start at the six low measurements (ovulation day
-        // minus five) and run to the end of the fertile window, where the
-        // temperature shift closes it. They must not spread past the window.
+        // The reference lines start at the earliest of the six low measurements
+        // (which gaps in the low phase can push earlier than ovulation day minus
+        // five) and run to the end of the fertile window, where the temperature
+        // shift closes it. They must not spread past the window.
         final onShiftBand =
             known &&
             window.confirmed &&
-            cycleDay >= window.ovulationDay - 5 &&
+            cycleDay >= (window.shiftBandStartDay ?? window.ovulationDay - 5) &&
             cycleDay <= window.lastFertileDay;
         result.add(
           ChartDay(
@@ -441,14 +438,18 @@ class AppController extends ChangeNotifier {
     }
     final day = current.cycle.length;
     final window = current.window;
-    final phase = window.isFertile(day) ? CyclePhase.fertile : CyclePhase.infertile;
+    final phase = window.isFertile(day)
+        ? CyclePhase.fertile
+        : CyclePhase.infertile;
 
     final String nextEvent;
     if (day < window.ovulationDay) {
       nextEvent = _inDays('Ovulation', window.ovulationDay - day);
     } else {
       final untilPeriod = window.ovulationDay + _lutealLength - day;
-      nextEvent = untilPeriod > 0 ? _inDays('Period', untilPeriod) : 'Period due';
+      nextEvent = untilPeriod > 0
+          ? _inDays('Period', untilPeriod)
+          : 'Period due';
     }
     return CycleStatus(cycleDay: day, phase: phase, nextEvent: nextEvent);
   }

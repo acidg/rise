@@ -14,6 +14,10 @@ class FertilityWindow {
   /// window is a prediction and stays open.
   final bool confirmed;
 
+  /// First cycle day the coverline and upper reference line are drawn from - the
+  /// earliest of the six low measurements. Present only when [confirmed].
+  final int? shiftBandStartDay;
+
   /// Coverline temperature, present only when [confirmed].
   final double? coverline;
 
@@ -25,6 +29,7 @@ class FertilityWindow {
     required this.lastFertileDay,
     required this.ovulationDay,
     required this.confirmed,
+    this.shiftBandStartDay,
     this.coverline,
     this.lowestHigherTemperature,
   });
@@ -36,6 +41,7 @@ class FertilityWindow {
       lastFertileDay = 0,
       ovulationDay = 0,
       confirmed = false,
+      shiftBandStartDay = null,
       coverline = null,
       lowestHigherTemperature = null;
 
