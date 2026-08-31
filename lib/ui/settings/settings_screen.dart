@@ -160,9 +160,9 @@ class _DevicePairingSectionState extends State<DevicePairingSection> {
       if (!mounted || count == null) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Synced $count measurements')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Synced $count measurements')));
     } on Object catch (error) {
       if (mounted) {
         _showError(error);

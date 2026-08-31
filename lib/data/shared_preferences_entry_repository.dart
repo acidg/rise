@@ -44,8 +44,11 @@ class SharedPreferencesEntryRepository implements EntryRepository {
     final decoded = jsonDecode(raw) as List<dynamic>;
     return {
       for (final item in decoded)
-        _dateKey(DateTime.parse((item as Map<String, dynamic>)['date'] as String)):
-            DayEntry.fromJson(item),
+        _dateKey(
+          DateTime.parse((item as Map<String, dynamic>)['date'] as String),
+        ): DayEntry.fromJson(
+          item,
+        ),
     };
   }
 

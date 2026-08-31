@@ -141,10 +141,9 @@ void main() {
       );
       await controller.load();
 
-      await controller.importMeasurements(
-        [Measurement(timestamp: DateTime(2026, 3, 1, 6, 30), celsius: 36.80)],
-        resolveConflict: (_) async => true,
-      );
+      await controller.importMeasurements([
+        Measurement(timestamp: DateTime(2026, 3, 1, 6, 30), celsius: 36.80),
+      ], resolveConflict: (_) async => true);
 
       final updated = controller.days.firstWhere((d) => d.date == day);
       expect(updated.temperature, 36.80);
@@ -154,39 +153,45 @@ void main() {
     },
   );
 
-  test('the resolver is asked once per diverging day, and only those', () async {
-    final controller = AppController(
-      repository: InMemoryEntryRepository([
-        // Diverges -> asks.
-        DayEntry(date: DateTime(2026, 3, 1), temperature: 36.40),
-        // Same value -> applied without asking.
-        DayEntry(date: DateTime(2026, 3, 2), temperature: 36.60),
-        // No stored temperature -> applied without asking.
-        DayEntry(date: DateTime(2026, 3, 3), menstruation: Menstruation.light),
-      ]),
-      thermometer: FakeThermometerService(),
-    );
-    await controller.load();
+  test(
+    'the resolver is asked once per diverging day, and only those',
+    () async {
+      final controller = AppController(
+        repository: InMemoryEntryRepository([
+          // Diverges -> asks.
+          DayEntry(date: DateTime(2026, 3, 1), temperature: 36.40),
+          // Same value -> applied without asking.
+          DayEntry(date: DateTime(2026, 3, 2), temperature: 36.60),
+          // No stored temperature -> applied without asking.
+          DayEntry(
+            date: DateTime(2026, 3, 3),
+            menstruation: Menstruation.light,
+          ),
+        ]),
+        thermometer: FakeThermometerService(),
+      );
+      await controller.load();
 
-    final askedDays = <DateTime>[];
-    await controller.importMeasurements(
-      [
-        Measurement(timestamp: DateTime(2026, 3, 1, 6, 30), celsius: 36.80),
-        Measurement(timestamp: DateTime(2026, 3, 2, 6, 30), celsius: 36.60),
-        Measurement(timestamp: DateTime(2026, 3, 3, 6, 30), celsius: 36.70),
-      ],
-      resolveConflict: (conflict) async {
-        askedDays.add(conflict.day);
-        return true;
-      },
-    );
+      final askedDays = <DateTime>[];
+      await controller.importMeasurements(
+        [
+          Measurement(timestamp: DateTime(2026, 3, 1, 6, 30), celsius: 36.80),
+          Measurement(timestamp: DateTime(2026, 3, 2, 6, 30), celsius: 36.60),
+          Measurement(timestamp: DateTime(2026, 3, 3, 6, 30), celsius: 36.70),
+        ],
+        resolveConflict: (conflict) async {
+          askedDays.add(conflict.day);
+          return true;
+        },
+      );
 
-    expect(askedDays, [DateTime(2026, 3, 1)]);
-    final third = controller.days.firstWhere(
-      (d) => d.date == DateTime(2026, 3, 3),
-    );
-    expect(third.temperature, 36.70);
-  });
+      expect(askedDays, [DateTime(2026, 3, 1)]);
+      final third = controller.days.firstWhere(
+        (d) => d.date == DateTime(2026, 3, 3),
+      );
+      expect(third.temperature, 36.70);
+    },
+  );
 
   test('with no resolver a diverging reading is left untouched', () async {
     final day = DateTime(2026, 3, 1);

@@ -100,19 +100,23 @@ class DayEntryCsv {
     final rawDate = cell('date');
     final date = rawDate == null ? null : DateTime.tryParse(rawDate);
     if (date == null) {
-      throw FormatException('Row $lineNo has no valid date ("${rawDate ?? ''}").');
+      throw FormatException(
+        'Row $lineNo has no valid date ("${rawDate ?? ''}").',
+      );
     }
     final rawTemperatureAt = cell('temperatureAt');
     return DayEntry(
       date: DateTime(date.year, date.month, date.day),
       temperature: double.tryParse(cell('temperature') ?? ''),
-      temperatureAt:
-          rawTemperatureAt == null ? null : DateTime.tryParse(rawTemperatureAt),
+      temperatureAt: rawTemperatureAt == null
+          ? null
+          : DateTime.tryParse(rawTemperatureAt),
       menstruation:
           _enumByName(Menstruation.values, cell('menstruation')) ??
           Menstruation.none,
       mucus:
-          _enumByName(CervicalMucus.values, cell('mucus')) ?? CervicalMucus.none,
+          _enumByName(CervicalMucus.values, cell('mucus')) ??
+          CervicalMucus.none,
       cervix: _enumByName(Cervix.values, cell('cervix')),
       pain: _enumByName(Pain.values, cell('pain')) ?? Pain.none,
       mood: _enumByName(Mood.values, cell('mood')),

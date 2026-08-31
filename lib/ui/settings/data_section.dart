@@ -86,7 +86,9 @@ class _DataSectionState extends State<DataSection> {
     if (!mounted) {
       return false;
     }
-    final date = MaterialLocalizations.of(context).formatMediumDate(conflict.day);
+    final date = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(conflict.day);
     final replace = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

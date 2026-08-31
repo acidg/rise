@@ -139,7 +139,9 @@ void main() {
     );
     await tester.enterText(find.byKey(const Key('temperature-field')), '36.99');
     // Dismiss the way a drag-down or tap-outside would: the sheet leaves the tree.
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SizedBox())),
+    );
     await tester.pumpAndSettle();
 
     expect(saved, isNotNull);
@@ -164,7 +166,9 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SizedBox())),
+    );
     await tester.pumpAndSettle();
 
     expect(saved, isNull);

@@ -12,31 +12,40 @@ AppController _controller(List<DayEntry> seed) => AppController(
 );
 
 void main() {
-  test('exported CSV round-trips through import into a fresh history', () async {
-    final entries = [
-      DayEntry(
-        date: DateTime(2026, 3, 1),
-        temperature: 36.40,
-        menstruation: Menstruation.medium,
-        notes: 'day, one',
-      ),
-      DayEntry(date: DateTime(2026, 3, 2), temperature: 36.55),
-    ];
-    final source = _controller(entries);
-    await source.load();
-    final csv = await source.exportCsv();
+  test(
+    'exported CSV round-trips through import into a fresh history',
+    () async {
+      final entries = [
+        DayEntry(
+          date: DateTime(2026, 3, 1),
+          temperature: 36.40,
+          menstruation: Menstruation.medium,
+          notes: 'day, one',
+        ),
+        DayEntry(date: DateTime(2026, 3, 2), temperature: 36.55),
+      ];
+      final source = _controller(entries);
+      await source.load();
+      final csv = await source.exportCsv();
 
-    final target = _controller(const []);
-    await target.load();
-    final result = await target.importCsv(csv);
+      final target = _controller(const []);
+      await target.load();
+      final result = await target.importCsv(csv);
 
-    expect(result.added, 2);
-    expect(target.days.map((d) => d.temperature), containsAll([36.40, 36.55]));
-    expect(
-      target.days.firstWhere((d) => d.date == DateTime(2026, 3, 1)).entry.notes,
-      'day, one',
-    );
-  });
+      expect(result.added, 2);
+      expect(
+        target.days.map((d) => d.temperature),
+        containsAll([36.40, 36.55]),
+      );
+      expect(
+        target.days
+            .firstWhere((d) => d.date == DateTime(2026, 3, 1))
+            .entry
+            .notes,
+        'day, one',
+      );
+    },
+  );
 
   test('an unchanged day is skipped, not counted as replaced', () async {
     final entry = DayEntry(date: DateTime(2026, 3, 1), temperature: 36.40);
@@ -59,7 +68,8 @@ void main() {
     ]);
     await controller.load();
     // A file that changes both days.
-    const csv = 'date,temperature\n'
+    const csv =
+        'date,temperature\n'
         '2026-03-01,36.90\n'
         '2026-03-02,36.95\n';
 
@@ -77,31 +87,41 @@ void main() {
     expect(result.replaced, 1);
     expect(result.skipped, 1);
     expect(
-      controller.days.firstWhere((d) => d.date == DateTime(2026, 3, 1)).temperature,
+      controller.days
+          .firstWhere((d) => d.date == DateTime(2026, 3, 1))
+          .temperature,
       36.90,
     );
     // The rejected conflict keeps its stored value.
     expect(
-      controller.days.firstWhere((d) => d.date == DateTime(2026, 3, 2)).temperature,
+      controller.days
+          .firstWhere((d) => d.date == DateTime(2026, 3, 2))
+          .temperature,
       36.50,
     );
   });
 
-  test('without a resolver a differing day is kept, never overwritten', () async {
-    final controller = _controller([
-      DayEntry(date: DateTime(2026, 3, 1), temperature: 36.40),
-    ]);
-    await controller.load();
+  test(
+    'without a resolver a differing day is kept, never overwritten',
+    () async {
+      final controller = _controller([
+        DayEntry(date: DateTime(2026, 3, 1), temperature: 36.40),
+      ]);
+      await controller.load();
 
-    final result =
-        await controller.importCsv('date,temperature\n2026-03-01,36.90\n');
+      final result = await controller.importCsv(
+        'date,temperature\n2026-03-01,36.90\n',
+      );
 
-    expect(result.skipped, 1);
-    expect(
-      controller.days.firstWhere((d) => d.date == DateTime(2026, 3, 1)).temperature,
-      36.40,
-    );
-  });
+      expect(result.skipped, 1);
+      expect(
+        controller.days
+            .firstWhere((d) => d.date == DateTime(2026, 3, 1))
+            .temperature,
+        36.40,
+      );
+    },
+  );
 
   test('the paired thermometer is not part of the exported data', () async {
     final controller = AppController(

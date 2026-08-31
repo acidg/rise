@@ -313,7 +313,12 @@ class GraphPainter extends CustomPainter {
       final cycleDayLabel = day.cycleDay?.toString() ?? '?';
       if (day.isToday) {
         // Today's cycle day sits in a filled pill so it stands out.
-        final label = _layout(cycleDayLabel, 13, bold: true, color: Colors.white);
+        final label = _layout(
+          cycleDayLabel,
+          13,
+          bold: true,
+          color: Colors.white,
+        );
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromCenter(

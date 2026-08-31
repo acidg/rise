@@ -22,10 +22,7 @@ void main() {
     final decoded = DayEntryCsv.decode(DayEntryCsv.encode([entry]));
 
     expect(decoded.single, entry);
-    expect(
-      decoded.single.temperatureAt,
-      DateTime(2026, 5, 4, 6, 45, 30),
-    );
+    expect(decoded.single.temperatureAt, DateTime(2026, 5, 4, 6, 45, 30));
   });
 
   test('nullable fields encode as empty cells and decode back to null', () {
@@ -57,7 +54,8 @@ void main() {
   });
 
   test('columns may be reordered and omitted, decoding to defaults', () {
-    const csv = 'notes,date\n'
+    const csv =
+        'notes,date\n'
         'hello,2026-05-04\n';
 
     final entry = DayEntryCsv.decode(csv).single;
@@ -71,14 +69,16 @@ void main() {
   });
 
   test('an unknown enum value falls back to the default', () {
-    const csv = 'date,mucus\n'
+    const csv =
+        'date,mucus\n'
         '2026-05-04,fromMars\n';
 
     expect(DayEntryCsv.decode(csv).single.mucus, CervicalMucus.none);
   });
 
   test('a blank line between rows is ignored', () {
-    const csv = 'date\n'
+    const csv =
+        'date\n'
         '2026-05-04\n'
         '\n'
         '2026-05-05\n';
@@ -114,8 +114,7 @@ void main() {
 
   test('the date is normalised to its calendar day', () {
     // A time-of-day on the date cell must not leak into the key.
-    final entry =
-        DayEntryCsv.decode('date\n2026-05-04T09:30:00\n').single;
+    final entry = DayEntryCsv.decode('date\n2026-05-04T09:30:00\n').single;
     expect(entry.date, DateTime(2026, 5, 4));
   });
 }

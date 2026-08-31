@@ -100,7 +100,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Synced 1 measurements'), findsOneWidget);
-    final day = controller.days.firstWhere((d) => d.date == DateTime(2026, 3, 11));
+    final day = controller.days.firstWhere(
+      (d) => d.date == DateTime(2026, 3, 11),
+    );
     expect(day.entry.temperature, 36.72);
   });
 

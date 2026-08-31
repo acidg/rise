@@ -51,15 +51,18 @@ void main() {
     expect(cycles[1].length, 6);
   });
 
-  test('with no bleeding at all the whole record is one unknown-start cycle', () {
-    final days = [for (var i = 0; i < 8; i++) day(i, Menstruation.none)];
+  test(
+    'with no bleeding at all the whole record is one unknown-start cycle',
+    () {
+      final days = [for (var i = 0; i < 8; i++) day(i, Menstruation.none)];
 
-    final cycles = segmenter.segment(days);
+      final cycles = segmenter.segment(days);
 
-    expect(cycles.length, 1);
-    expect(cycles.single.hasKnownStart, isFalse);
-    expect(cycles.single.isCurrent, isTrue);
-  });
+      expect(cycles.length, 1);
+      expect(cycles.single.hasKnownStart, isFalse);
+      expect(cycles.single.isCurrent, isTrue);
+    },
+  );
 
   test('mid-cycle spotting does not start a new cycle', () {
     final days = <DayEntry>[
