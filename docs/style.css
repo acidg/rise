@@ -209,6 +209,8 @@ img { display: block; max-width: 100%; }
 
 .feature p { margin: 0; color: var(--muted); }
 
+.contribute-cta { margin-top: 2.4rem; }
+
 /* Screenshots -------------------------------------------------------- */
 
 .shot-grid {
