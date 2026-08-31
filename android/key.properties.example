@@ -1,0 +1,9 @@
+# Copy to android/key.properties (git-ignored) to build a signed release locally.
+# CI writes this file from repository secrets instead.
+#
+# For a PKCS12 keystore, keyPassword must equal storePassword.
+# storeFile is resolved relative to the android/ directory.
+storeFile=rise-release.jks
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=rise
