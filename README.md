@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/icon.png" alt="Rise app icon" width="128" height="128">
+</p>
+
 # Rise - Fertility Tracker
 
 Rise is a privacy-first symptothermal fertility tracker built around the Ovy

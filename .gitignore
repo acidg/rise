@@ -47,6 +47,9 @@ app.*.map.json
 # direnv / Nix dev shell
 /.direnv/
 
+# Claude Code project instructions
+CLAUDE.md
+
 # Release signing material — never commit keystores or the properties that
 # reference them. CI recreates key.properties from repository secrets.
 **/key.properties
