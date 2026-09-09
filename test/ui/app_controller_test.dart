@@ -240,6 +240,7 @@ void main() {
           DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
       ]),
       thermometer: FakeThermometerService(),
+      now: () => base.add(const Duration(days: 11)),
     );
 
     await controller.load();
@@ -280,4 +281,78 @@ void main() {
     expect(controller.pairedDevice, isNull);
     expect(await store.load(), isNull);
   });
+
+  test('an empty history still offers today as an editable day', () async {
+    final today = DateTime(2026, 5, 20);
+    final controller = AppController(
+      repository: InMemoryEntryRepository(const []),
+      thermometer: FakeThermometerService(),
+      now: () => today,
+    );
+
+    await controller.load();
+
+    expect(controller.days, hasLength(1));
+    expect(controller.days.single.date, today);
+    expect(controller.days.single.isToday, isTrue);
+    expect(controller.days.single.isFuture, isFalse);
+  });
+
+  test('a history without a recognised cycle reaches today', () async {
+    final base = DateTime(2026, 5, 14);
+    final today = DateTime(2026, 5, 20);
+    final controller = AppController(
+      repository: InMemoryEntryRepository([
+        for (var i = 0; i < 4; i++)
+          DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
+      ]),
+      thermometer: FakeThermometerService(),
+      now: () => today,
+    );
+
+    await controller.load();
+
+    expect(controller.status.isKnown, isFalse);
+    final last = controller.days.last;
+    expect(last.date, today);
+    expect(last.isToday, isTrue);
+    expect(last.isFuture, isFalse);
+  });
+
+  test(
+    'days unrecorded since the last entry are editable up to today',
+    () async {
+      final base = DateTime(2026, 5, 1);
+      final today = DateTime(2026, 5, 20);
+      final controller = AppController(
+        repository: InMemoryEntryRepository([
+          DayEntry(
+            date: base,
+            menstruation: Menstruation.medium,
+            temperature: 36.4,
+          ),
+          for (var i = 1; i < 5; i++)
+            DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
+        ]),
+        thermometer: FakeThermometerService(),
+        now: () => today,
+      );
+
+      await controller.load();
+
+      // Cycle day 1 is 1 May, so today is cycle day 20 even though logging
+      // stopped on the fifth.
+      expect(controller.status.cycleDay, 20);
+      final todayDay = controller.days.firstWhere((d) => d.date == today);
+      expect(todayDay.isToday, isTrue);
+      expect(todayDay.isFuture, isFalse);
+      // Only the days past today are predictions.
+      expect(
+        controller.days
+            .where((d) => d.isFuture)
+            .every((d) => d.date.isAfter(today)),
+        isTrue,
+      );
+    },
+  );
 }

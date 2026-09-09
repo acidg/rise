@@ -11,6 +11,10 @@ import 'package:rise/ui/app_controller.dart';
 import 'package:rise/ui/chart/chart_screen.dart';
 import 'package:rise/ui/detail/day_detail_sheet.dart';
 
+/// The last day the sample history covers; tests pin "today" to it so the chart
+/// does not stretch from the sample dates to the real current date.
+final DateTime sampleToday = DateTime(2026, 3, 10);
+
 List<DayEntry> sampleEntries() {
   final base = DateTime(2026, 3, 1);
   return [
@@ -27,6 +31,7 @@ AppController loadedController() {
   return AppController(
     repository: InMemoryEntryRepository(sampleEntries()),
     thermometer: FakeThermometerService(),
+    now: () => sampleToday,
   );
 }
 
@@ -58,6 +63,7 @@ void main() {
           DayEntry(date: base.add(Duration(days: i)), temperature: 36.5),
       ]),
       thermometer: FakeThermometerService(),
+      now: () => base.add(const Duration(days: 4)),
     );
     await controller.load();
 
@@ -91,6 +97,7 @@ void main() {
       pairedDeviceStore: InMemoryPairedDeviceStore(
         const DiscoveredThermometer(id: 'AA:BB', name: 'Ovy OT35'),
       ),
+      now: () => sampleToday,
     );
     await controller.load();
     await tester.pumpWidget(wrap(controller));
@@ -117,5 +124,23 @@ void main() {
 
     expect(find.byType(DayDetailSheet), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
+  });
+
+  testWidgets('with an empty history today can be tapped to log data', (
+    tester,
+  ) async {
+    final controller = AppController(
+      repository: InMemoryEntryRepository(const []),
+      thermometer: FakeThermometerService(),
+      now: () => sampleToday,
+    );
+    await controller.load();
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chart')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DayDetailSheet), findsOneWidget);
   });
 }

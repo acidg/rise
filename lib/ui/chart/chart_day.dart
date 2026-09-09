@@ -25,7 +25,8 @@ class ChartDay {
   /// A predicted day past today, with no logged data. Not tappable.
   final bool isFuture;
 
-  /// The most recent recorded day of the current cycle.
+  /// The current calendar day. Always present on the chart, whether or not
+  /// anything was logged for it.
   final bool isToday;
 
   const ChartDay({

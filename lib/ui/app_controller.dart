@@ -91,12 +91,17 @@ class AppController extends ChangeNotifier {
   final PairedDeviceStore pairedDeviceStore;
   final CycleAnalysis analysis;
 
+  /// Reads the current date. Injected so tests can pin today.
+  final DateTime Function() now;
+
   AppController({
     required this.repository,
     required this.thermometer,
     PairedDeviceStore? pairedDeviceStore,
     this.analysis = const CycleAnalysis(),
-  }) : pairedDeviceStore = pairedDeviceStore ?? InMemoryPairedDeviceStore();
+    DateTime Function()? now,
+  }) : pairedDeviceStore = pairedDeviceStore ?? InMemoryPairedDeviceStore(),
+       now = now ?? DateTime.now;
 
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
@@ -137,7 +142,7 @@ class AppController extends ChangeNotifier {
 
   /// Load entries, the remembered paired device, and compute the chart days.
   Future<void> load() async {
-    final entries = await repository.loadAll();
+    final entries = _throughToday(await repository.loadAll());
     final analyzed = analysis.analyze(entries);
     _days = _buildChartDays(analyzed);
     _status = _computeStatus(analyzed);
@@ -385,7 +390,25 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Extend [entries] so the history always reaches today, adding an empty day
+  /// for today when the record is empty or stops earlier. Today then has a
+  /// column on the chart and can be edited by hand even before any cycle is
+  /// known, and cycle days keep counting through a stretch that was never
+  /// logged. The added day carries no data, so nothing is written to the
+  /// repository; the analysis fills the days in between.
+  List<DayEntry> _throughToday(List<DayEntry> entries) {
+    final today = _dateKey(now());
+    if (entries.isEmpty) {
+      return [DayEntry(date: today)];
+    }
+    if (!_dateKey(entries.last.date).isBefore(today)) {
+      return entries;
+    }
+    return [...entries, DayEntry(date: today)];
+  }
+
   List<ChartDay> _buildChartDays(List<AnalyzedCycle> analyzed) {
+    final today = _dateKey(now());
     final result = <ChartDay>[];
     for (final cycleWithWindow in analyzed) {
       final window = cycleWithWindow.window;
@@ -414,7 +437,7 @@ class AppController extends ChangeNotifier {
             lowestHigherTemperature: onShiftBand
                 ? window.lowestHigherTemperature
                 : null,
-            isToday: cycle.isCurrent && i == days.length - 1,
+            isToday: _dateKey(days[i].date) == today,
           ),
         );
       }
