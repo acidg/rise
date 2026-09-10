@@ -28,7 +28,9 @@ class DayDetailSheet extends StatefulWidget {
 class _DayDetailSheetState extends State<DayDetailSheet> {
   late final TextEditingController _temperatureController;
   TimeOfDay? _temperatureTime;
+  late bool _temperatureExcluded;
   late Menstruation _menstruation;
+  late bool _menstruationExcluded;
   late CervicalMucus _mucus;
   Cervix? _cervix;
   late Pain _pain;
@@ -60,7 +62,9 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     _temperatureTime = measuredAt == null
         ? null
         : TimeOfDay.fromDateTime(measuredAt);
+    _temperatureExcluded = entry.temperatureExcluded;
     _menstruation = entry.menstruation;
+    _menstruationExcluded = entry.menstruationExcluded;
     _mucus = entry.mucus;
     _cervix = entry.cervix;
     _pain = entry.pain;
@@ -86,6 +90,11 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
   /// blank or holds an incomplete/unparseable entry.
   double? get _fieldTemperature =>
       double.tryParse(_temperatureController.text.replaceAll(',', '.'));
+
+  /// Whether the day carries a measurement to exclude: one typed into the field,
+  /// or one already stored from a sync or an earlier edit.
+  bool get _hasTemperature =>
+      _fieldTemperature != null || widget.entry.temperature != null;
 
   /// Adjust the temperature by [delta] from the value currently shown, keeping it
   /// to two decimals. Stepping from a blank field seeds the default first, so the
@@ -119,7 +128,12 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     return widget.entry.copyWith(
       temperature: hasTemperature ? temperature : null,
       temperatureAt: measuredAt,
+      // An exclusion only means something next to a value, so it is dropped
+      // along with the value it referred to.
+      temperatureExcluded: hasTemperature && _temperatureExcluded,
       menstruation: _menstruation,
+      menstruationExcluded:
+          _menstruation != Menstruation.none && _menstruationExcluded,
       mucus: _mucus,
       cervix: _cervix,
       pain: _pain,
@@ -160,6 +174,13 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
             ),
             const SizedBox(height: 16),
             _temperatureField(context),
+            if (_hasTemperature)
+              _excludeToggle(
+                key: const Key('exclude-temperature'),
+                excluded: _temperatureExcluded,
+                onChanged: (value) =>
+                    setState(() => _temperatureExcluded = value),
+              ),
             _chips<Menstruation>(
               'Bleeding',
               Menstruation.values,
@@ -167,6 +188,13 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
               (v) => v.label,
               (v) => setState(() => _menstruation = v),
             ),
+            if (_menstruation != Menstruation.none)
+              _excludeToggle(
+                key: const Key('exclude-menstruation'),
+                excluded: _menstruationExcluded,
+                onChanged: (value) =>
+                    setState(() => _menstruationExcluded = value),
+              ),
             _chips<CervicalMucus>(
               'Cervical mucus',
               CervicalMucus.values,
@@ -265,8 +293,12 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
               ),
             ),
             onChanged: (_) {
-              _dirty = true;
-              _temperatureTouched = true;
+              // Rebuilt on every keystroke so the exclude toggle appears as soon
+              // as the field holds a temperature.
+              setState(() {
+                _dirty = true;
+                _temperatureTouched = true;
+              });
             },
           ),
         ),
@@ -296,6 +328,28 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
       avatar: const Icon(Icons.schedule, size: 18),
       label: Text(label),
       onPressed: _pickTime,
+    );
+  }
+
+  /// Keeps a value on the day but takes it out of the fertility rules, for a
+  /// measurement taken under a disturbance or a bleed that should not start a
+  /// cycle. Only offered next to a value there is something to exclude.
+  Widget _excludeToggle({
+    required Key key,
+    required bool excluded,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: FilterChip(
+        key: key,
+        label: const Text('Exclude from analysis'),
+        selected: excluded,
+        onSelected: (value) {
+          _markDirty();
+          onChanged(value);
+        },
+      ),
     );
   }
 

@@ -4,9 +4,12 @@ import 'package:rise/domain/models/signs.dart';
 
 /// Builds a cycle from a temperature series (indexed by cycle day minus one) for
 /// engine tests. Day 1 is marked as menstruation so it also reads as a start.
+/// [excludedTemperatureDays] holds the 1-based cycle days whose measurement is
+/// marked as disturbed.
 Cycle buildCycle({
   required List<double?> temperatures,
   Map<int, CervicalMucus> mucus = const {},
+  Set<int> excludedTemperatureDays = const {},
   bool isCurrent = false,
 }) {
   final base = DateTime(2026, 1, 1);
@@ -15,6 +18,7 @@ Cycle buildCycle({
       DayEntry(
         date: base.add(Duration(days: i)),
         temperature: temperatures[i],
+        temperatureExcluded: excludedTemperatureDays.contains(i + 1),
         menstruation: i == 0 ? Menstruation.medium : Menstruation.none,
         mucus: mucus[i + 1] ?? CervicalMucus.none,
       ),

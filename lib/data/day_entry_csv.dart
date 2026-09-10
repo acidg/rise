@@ -7,9 +7,9 @@ import '../domain/models/signs.dart';
 /// This is the portable, user-inspectable form of the history (openable in any
 /// spreadsheet). Only user-entered tracking data is represented; the paired
 /// thermometer is device-specific and deliberately absent. Enums are written by
-/// their [Enum.name] so the file stays readable and stable across releases, and
-/// unknown or empty values decode back to the field default, matching
-/// [DayEntry.fromJson].
+/// their [Enum.name] and the exclusion flags as `true`/`false`, so the file
+/// stays readable and stable across releases, and unknown or empty values decode
+/// back to the field default, matching [DayEntry.fromJson].
 class DayEntryCsv {
   /// Column order of the CSV, also the header row. Decoding looks columns up by
   /// name, so a file whose columns were reordered still imports.
@@ -17,7 +17,9 @@ class DayEntryCsv {
     'date',
     'temperature',
     'temperatureAt',
+    'temperatureExcluded',
     'menstruation',
+    'menstruationExcluded',
     'mucus',
     'cervix',
     'pain',
@@ -76,7 +78,9 @@ class DayEntryCsv {
       _date(entry.date),
       entry.temperature?.toString() ?? '',
       entry.temperatureAt == null ? '' : _dateTime(entry.temperatureAt!),
+      entry.temperatureExcluded.toString(),
       entry.menstruation.name,
+      entry.menstruationExcluded.toString(),
       entry.mucus.name,
       entry.cervix?.name ?? '',
       entry.pain.name,
@@ -111,9 +115,11 @@ class DayEntryCsv {
       temperatureAt: rawTemperatureAt == null
           ? null
           : DateTime.tryParse(rawTemperatureAt),
+      temperatureExcluded: _flag(cell('temperatureExcluded')),
       menstruation:
           _enumByName(Menstruation.values, cell('menstruation')) ??
           Menstruation.none,
+      menstruationExcluded: _flag(cell('menstruationExcluded')),
       mucus:
           _enumByName(CervicalMucus.values, cell('mucus')) ??
           CervicalMucus.none,
@@ -127,6 +133,11 @@ class DayEntryCsv {
       notes: cell('notes') ?? '',
     );
   }
+
+  /// Read an exclusion flag. Only an explicit `true` (in any casing) excludes, so
+  /// an empty cell, a missing column, or an unexpected value keeps the value in
+  /// the analysis rather than silently dropping it.
+  static bool _flag(String? value) => value?.toLowerCase() == 'true';
 
   static T? _enumByName<T extends Enum>(List<T> values, String? name) {
     if (name == null) {

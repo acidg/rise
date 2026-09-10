@@ -143,4 +143,28 @@ void main() {
       },
     );
   });
+
+  test(
+    'an excluded measurement counts as a gap, not as a higher measurement',
+    () {
+      final temperatures = biphasic(lowDays: 6, highDays: 4);
+
+      final undisturbed = analyzer.analyze([
+        buildCycle(temperatures: temperatures, isCurrent: true),
+      ]).single;
+      final disturbed = analyzer.analyze([
+        buildCycle(
+          temperatures: temperatures,
+          excludedTemperatureDays: {7}, // the first higher measurement
+          isCurrent: true,
+        ),
+      ]).single;
+
+      expect(undisturbed.ovulationDay, 6);
+      expect(undisturbed.lastFertileDay, 9);
+      // Without day 7 the rise starts a day later and confirms a day later.
+      expect(disturbed.ovulationDay, 7);
+      expect(disturbed.lastFertileDay, 10);
+    },
+  );
 }

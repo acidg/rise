@@ -76,4 +76,23 @@ void main() {
 
     expect(cycles.length, 1);
   });
+
+  test('excluded bleeding does not start a cycle', () {
+    final days = <DayEntry>[
+      day(0, Menstruation.medium),
+      day(1, Menstruation.light),
+      for (var i = 2; i < 10; i++) day(i, Menstruation.none),
+      // A breakthrough bleed the user took out of the analysis.
+      DayEntry(
+        date: base.add(const Duration(days: 10)),
+        menstruation: Menstruation.medium,
+        menstruationExcluded: true,
+      ),
+      for (var i = 11; i < 20; i++) day(i, Menstruation.none),
+    ];
+
+    final cycles = segmenter.segment(days);
+
+    expect(cycles.single.length, 20);
+  });
 }

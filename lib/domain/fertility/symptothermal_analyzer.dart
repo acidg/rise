@@ -93,7 +93,9 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
   }
 
   _CycleFacts _extractFacts(Cycle cycle) {
-    final temperatures = cycle.days.map((d) => d.temperature).toList();
+    final temperatures = cycle.days
+        .map((d) => d.temperatureForAnalysis)
+        .toList();
     final shift = detectTemperatureShift(temperatures);
 
     int? onset;

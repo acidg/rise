@@ -23,11 +23,19 @@ T? _enumByName<T extends Enum>(List<T> values, Object? name) {
 /// no measurement exists for the day. [temperatureAt] is the moment that
 /// temperature was taken, filled from the thermometer's clock on sync or entered
 /// by hand; null when unknown.
+///
+/// A measurement taken under a known disturbance (illness, alcohol, an unusual
+/// waking time) stays recorded but must not drive the rules. The two exclusion
+/// flags express that: they keep the value visible on the chart while hiding it
+/// from the analysis, which reads [temperatureForAnalysis] and
+/// [menstruationForAnalysis] instead of the raw fields.
 class DayEntry {
   final DateTime date;
   final double? temperature;
   final DateTime? temperatureAt;
+  final bool temperatureExcluded;
   final Menstruation menstruation;
+  final bool menstruationExcluded;
   final CervicalMucus mucus;
   final Cervix? cervix;
   final Pain pain;
@@ -40,7 +48,9 @@ class DayEntry {
     required this.date,
     this.temperature,
     this.temperatureAt,
+    this.temperatureExcluded = false,
     this.menstruation = Menstruation.none,
+    this.menstruationExcluded = false,
     this.mucus = CervicalMucus.none,
     this.cervix,
     this.pain = Pain.none,
@@ -51,14 +61,29 @@ class DayEntry {
   });
 
   /// Whether the user logged anything beyond an auto-synced temperature. Drives
-  /// the "has entry" indicator on the chart.
+  /// the "has entry" indicator on the chart. Excluding a value counts: it is a
+  /// deliberate entry about the day, even on a day that holds nothing else.
   bool get hasUserEntry {
     return notes.isNotEmpty ||
         intercourse != Intercourse.none ||
         menstruation != Menstruation.none ||
         mucus.isPresent ||
-        pain != Pain.none;
+        pain != Pain.none ||
+        temperatureExcluded ||
+        menstruationExcluded;
   }
+
+  /// The temperature the fertility rules may use: null when the day carries no
+  /// measurement or the one it carries is excluded, so a disturbed value counts
+  /// as a measurement gap rather than a low or a higher measurement.
+  double? get temperatureForAnalysis =>
+      temperatureExcluded ? null : temperature;
+
+  /// The bleeding the cycle rules may use: [Menstruation.none] when the logged
+  /// bleeding is excluded, so a withdrawal or breakthrough bleed does not start
+  /// a new cycle.
+  Menstruation get menstruationForAnalysis =>
+      menstruationExcluded ? Menstruation.none : menstruation;
 
   /// Serialise to a JSON-compatible map. Enums are stored by name so the wire
   /// form stays stable and readable if their declaration order ever changes.
@@ -68,7 +93,9 @@ class DayEntry {
       'date': DateTime(date.year, date.month, date.day).toIso8601String(),
       'temperature': temperature,
       'temperatureAt': temperatureAt?.toIso8601String(),
+      'temperatureExcluded': temperatureExcluded,
       'menstruation': menstruation.name,
+      'menstruationExcluded': menstruationExcluded,
       'mucus': mucus.name,
       'cervix': cervix?.name,
       'pain': pain.name,
@@ -90,9 +117,11 @@ class DayEntry {
         final String at => DateTime.parse(at),
         _ => null,
       },
+      temperatureExcluded: json['temperatureExcluded'] as bool? ?? false,
       menstruation:
           _enumByName(Menstruation.values, json['menstruation']) ??
           Menstruation.none,
+      menstruationExcluded: json['menstruationExcluded'] as bool? ?? false,
       mucus:
           _enumByName(CervicalMucus.values, json['mucus']) ??
           CervicalMucus.none,
@@ -117,7 +146,9 @@ class DayEntry {
         _dateKey(other.date) == _dateKey(date) &&
         other.temperature == temperature &&
         other.temperatureAt == temperatureAt &&
+        other.temperatureExcluded == temperatureExcluded &&
         other.menstruation == menstruation &&
+        other.menstruationExcluded == menstruationExcluded &&
         other.mucus == mucus &&
         other.cervix == cervix &&
         other.pain == pain &&
@@ -132,7 +163,9 @@ class DayEntry {
     _dateKey(date),
     temperature,
     temperatureAt,
+    temperatureExcluded,
     menstruation,
+    menstruationExcluded,
     mucus,
     cervix,
     pain,
@@ -148,7 +181,9 @@ class DayEntry {
   DayEntry copyWith({
     double? temperature,
     DateTime? temperatureAt,
+    bool? temperatureExcluded,
     Menstruation? menstruation,
+    bool? menstruationExcluded,
     CervicalMucus? mucus,
     Cervix? cervix,
     Pain? pain,
@@ -161,7 +196,9 @@ class DayEntry {
       date: date,
       temperature: temperature ?? this.temperature,
       temperatureAt: temperatureAt ?? this.temperatureAt,
+      temperatureExcluded: temperatureExcluded ?? this.temperatureExcluded,
       menstruation: menstruation ?? this.menstruation,
+      menstruationExcluded: menstruationExcluded ?? this.menstruationExcluded,
       mucus: mucus ?? this.mucus,
       cervix: cervix ?? this.cervix,
       pain: pain ?? this.pain,

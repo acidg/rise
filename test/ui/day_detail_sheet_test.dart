@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rise/domain/models/day_entry.dart';
+import 'package:rise/domain/models/signs.dart';
 import 'package:rise/ui/detail/day_detail_sheet.dart';
 
 void main() {
@@ -211,5 +212,37 @@ void main() {
     expect(saved.temperatureAt!.year, 2026);
     expect(saved.temperatureAt!.month, 3);
     expect(saved.temperatureAt!.day, 1);
+  });
+
+  testWidgets('excluding a temperature keeps the value and sets the flag', (
+    tester,
+  ) async {
+    final entry = DayEntry(date: DateTime(2026, 3, 1), temperature: 36.50);
+
+    final saved = await editAndSave(tester, entry, (t) async {
+      await t.tap(find.byKey(const Key('exclude-temperature')));
+      await t.pumpAndSettle();
+    });
+
+    expect(saved.temperature, 36.50);
+    expect(saved.temperatureExcluded, isTrue);
+    expect(saved.temperatureForAnalysis, isNull);
+  });
+
+  testWidgets('the bleeding exclude toggle appears once bleeding is logged', (
+    tester,
+  ) async {
+    final entry = DayEntry(date: DateTime(2026, 3, 1));
+
+    final saved = await editAndSave(tester, entry, (t) async {
+      expect(find.byKey(const Key('exclude-menstruation')), findsNothing);
+      await t.tap(find.text('Spotting'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const Key('exclude-menstruation')));
+      await t.pumpAndSettle();
+    });
+
+    expect(saved.menstruation, Menstruation.spotting);
+    expect(saved.menstruationExcluded, isTrue);
   });
 }

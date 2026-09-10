@@ -255,6 +255,7 @@ class GraphPainter extends CustomPainter {
     // dots sit cleanly on top of it rather than being clipped by later segments.
     final points = <Offset>[];
     final todayFlags = <bool>[];
+    final excluded = <Offset>[];
     Offset? previous;
     for (var i = 0; i < days.length; i++) {
       final temperature = days[i].temperature;
@@ -263,12 +264,29 @@ class GraphPainter extends CustomPainter {
         continue;
       }
       final point = Offset(_centerX(i), _tempY(temperature, top, bottom));
+      // An excluded measurement is a gap to the rules, so the curve breaks
+      // around it exactly as it does on an unmeasured day. The dot stays, drawn
+      // muted, because the value was still taken.
+      if (days[i].temperatureExcluded) {
+        excluded.add(point);
+        previous = null;
+        continue;
+      }
       if (previous != null) {
         canvas.drawLine(previous, point, linePaint);
       }
       points.add(point);
       todayFlags.add(days[i].isToday);
       previous = point;
+    }
+
+    final excludedRing = Paint()
+      ..color = muted
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    for (final point in excluded) {
+      canvas.drawCircle(point, 4.0, fillPaint);
+      canvas.drawCircle(point, 4.0, excludedRing);
     }
 
     // A white-filled dot with a coloured ring reads clearly against the line;

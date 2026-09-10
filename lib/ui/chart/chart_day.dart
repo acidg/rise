@@ -43,5 +43,9 @@ class ChartDay {
 
   DateTime get date => entry.date;
   double? get temperature => entry.temperature;
+
+  /// Whether the measurement is excluded from the rules, and so drawn as a
+  /// disturbed value the curve steps over.
+  bool get temperatureExcluded => entry.temperatureExcluded;
   bool get hasEntry => entry.hasUserEntry;
 }

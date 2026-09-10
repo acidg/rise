@@ -11,7 +11,8 @@ abstract interface class CycleSegmenter {
 
 /// Starts a new cycle on each menstruation onset: the first day of real bleeding
 /// (light or heavier) that follows a day without such bleeding. Spotting does
-/// not start a cycle, so mid-cycle or premenstrual spotting is ignored.
+/// not start a cycle, so mid-cycle or premenstrual spotting is ignored, and
+/// neither does bleeding the user excluded.
 ///
 /// A history can begin mid-cycle, so the days before the first onset are kept as
 /// a leading run with an unknown start ([Cycle.hasKnownStart] false) rather than
@@ -28,10 +29,10 @@ class MenstruationCycleSegmenter implements CycleSegmenter {
 
     final onsets = <int>[];
     for (var i = 0; i < days.length; i++) {
-      if (!days[i].menstruation.isFlow) {
+      if (!days[i].menstruationForAnalysis.isFlow) {
         continue;
       }
-      if (i == 0 || !days[i - 1].menstruation.isFlow) {
+      if (i == 0 || !days[i - 1].menstruationForAnalysis.isFlow) {
         onsets.add(i);
       }
     }

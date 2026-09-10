@@ -105,7 +105,7 @@ class AttributeTablePainter extends CustomPainter {
       final entry = days[i].entry;
       final cx = _centerX(i);
       _temperature(canvas, entry, cx, _rowCenter(0));
-      _period(canvas, entry.menstruation, cx, _rowCenter(1));
+      _period(canvas, entry, cx, _rowCenter(1));
       _mucus(canvas, entry.mucus, cx, _rowCenter(2));
       _cervix(canvas, entry.cervix, cx, _rowCenter(3));
       _pain(canvas, entry.pain, cx, _rowCenter(4));
@@ -129,11 +129,13 @@ class AttributeTablePainter extends CustomPainter {
       _faint(canvas, cx, cy);
       return;
     }
-    _cellText(canvas, temperature.toStringAsFixed(2), cx, cy, onSurface, 9.5);
+    // An excluded measurement is greyed, matching the muted dot on the curve.
+    final color = entry.temperatureExcluded ? muted : onSurface;
+    _cellText(canvas, temperature.toStringAsFixed(2), cx, cy, color, 9.5);
   }
 
-  void _period(Canvas canvas, Menstruation menstruation, double cx, double cy) {
-    final alpha = switch (menstruation) {
+  void _period(Canvas canvas, DayEntry entry, double cx, double cy) {
+    final alpha = switch (entry.menstruation) {
       Menstruation.heavy => 1.0,
       Menstruation.medium => 0.85,
       Menstruation.light => 0.6,
@@ -144,12 +146,20 @@ class AttributeTablePainter extends CustomPainter {
       _faint(canvas, cx, cy);
       return;
     }
+    // Excluded bleeding is outlined rather than filled: recorded, but not
+    // counted as the start of a cycle.
+    final paint = Paint()..color = colors.period.withValues(alpha: alpha);
+    if (entry.menstruationExcluded) {
+      paint
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+    }
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx, cy), width: 12, height: 16),
         const Radius.circular(3),
       ),
-      Paint()..color = colors.period.withValues(alpha: alpha),
+      paint,
     );
   }
 

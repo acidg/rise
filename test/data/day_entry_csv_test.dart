@@ -117,4 +117,30 @@ void main() {
     final entry = DayEntryCsv.decode('date\n2026-05-04T09:30:00\n').single;
     expect(entry.date, DateTime(2026, 5, 4));
   });
+
+  test('exclusion flags survive a round-trip', () {
+    final entry = DayEntry(
+      date: DateTime(2026, 5, 4),
+      temperature: 36.62,
+      temperatureExcluded: true,
+      menstruation: Menstruation.light,
+      menstruationExcluded: true,
+    );
+
+    final csv = DayEntryCsv.encode([entry]);
+
+    expect(csv, contains('36.62,,true,light,true'));
+    expect(DayEntryCsv.decode(csv).single, entry);
+  });
+
+  test('a file without the exclusion columns decodes as not excluded', () {
+    const csv =
+        'date,temperature,menstruation\n'
+        '2026-05-04,36.62,light\n';
+
+    final entry = DayEntryCsv.decode(csv).single;
+
+    expect(entry.temperatureExcluded, isFalse);
+    expect(entry.menstruationExcluded, isFalse);
+  });
 }
