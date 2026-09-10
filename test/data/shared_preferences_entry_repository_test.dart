@@ -88,4 +88,18 @@ void main() {
 
     expect(days, [4, 5, 6]);
   });
+
+  test('saveAll persists the whole batch in one write', () async {
+    final entries = [
+      for (var day = 1; day <= 40; day++)
+        DayEntry(date: DateTime(2026, 5, day), temperature: 36.40),
+    ];
+
+    await SharedPreferencesEntryRepository().saveAll(entries);
+
+    final loaded = await SharedPreferencesEntryRepository().loadAll();
+    expect(loaded, hasLength(40));
+    expect(loaded.first.date, DateTime(2026, 5, 1));
+    expect(loaded.last.date, DateTime(2026, 6, 9));
+  });
 }

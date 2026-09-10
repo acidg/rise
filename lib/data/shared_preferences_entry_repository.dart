@@ -22,10 +22,15 @@ class SharedPreferencesEntryRepository implements EntryRepository {
   }
 
   @override
-  Future<void> save(DayEntry entry) async {
+  Future<void> save(DayEntry entry) => saveAll([entry]);
+
+  @override
+  Future<void> saveAll(Iterable<DayEntry> entries) async {
     final prefs = await SharedPreferences.getInstance();
     final byDate = _read(prefs);
-    byDate[_dateKey(entry.date)] = entry;
+    for (final entry in entries) {
+      byDate[_dateKey(entry.date)] = entry;
+    }
     final ordered = byDate.values.toList()
       ..sort((a, b) => a.date.compareTo(b.date));
     await prefs.setString(

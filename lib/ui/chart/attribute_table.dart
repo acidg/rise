@@ -52,28 +52,46 @@ class AttributeTablePainter extends CustomPainter {
   final Color muted;
   final Color separator;
 
+  /// The chart's horizontal scroll and viewport, so the table records only the
+  /// columns on screen, exactly as the graph above it does.
+  final ScrollController scroll;
+  final double viewportWidth;
+
+  int _first = 0;
+  int _last = -1;
+
   AttributeTablePainter({
     required this.days,
     required this.colors,
     required this.onSurface,
     required this.muted,
     required this.separator,
-  });
+    required this.scroll,
+    required this.viewportWidth,
+  }) : super(repaint: scroll);
 
   double _centerX(int index) => index * kColumnWidth + kColumnWidth / 2;
   double _rowCenter(int row) => row * kAttrRowHeight + kAttrRowHeight / 2;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final range = visibleColumns(
+      days.length,
+      scrollOffset(scroll),
+      viewportWidth,
+    );
+    _first = range.first;
+    _last = range.last;
+
     final zebraPaint = Paint()..color = colors.columnAlt;
-    for (var i = 1; i < days.length; i += 2) {
+    for (var i = _first.isOdd ? _first : _first + 1; i <= _last; i += 2) {
       canvas.drawRect(
         Rect.fromLTWH(i * kColumnWidth, 0, kColumnWidth, size.height),
         zebraPaint,
       );
     }
 
-    final todayIndex = days.indexWhere((d) => d.isToday);
+    final todayIndex = _indexOfToday();
     if (todayIndex >= 0) {
       canvas.drawRect(
         Rect.fromLTWH(todayIndex * kColumnWidth, 0, kColumnWidth, size.height),
@@ -84,13 +102,15 @@ class AttributeTablePainter extends CustomPainter {
     final separatorPaint = Paint()
       ..color = separator
       ..strokeWidth = 1;
+    final left = _first * kColumnWidth;
+    final right = (_last + 1) * kColumnWidth;
     // Row 0's line is the boundary between the graph and the table.
     for (var row = 0; row < kAttrRowLabels.length; row++) {
       final y = row * kAttrRowHeight;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), separatorPaint);
+      canvas.drawLine(Offset(left, y), Offset(right, y), separatorPaint);
     }
     // Continue each cycle-start separator from the graph down through the table.
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       if (days[i].cycleDay != 1) {
         continue;
       }
@@ -98,7 +118,7 @@ class AttributeTablePainter extends CustomPainter {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), separatorPaint);
     }
 
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       if (days[i].isFuture) {
         continue; // predicted days carry no logged values
       }
@@ -113,6 +133,17 @@ class AttributeTablePainter extends CustomPainter {
       _sex(canvas, entry.intercourse, cx, _rowCenter(6));
       _libido(canvas, entry.libido, cx, _rowCenter(7));
     }
+  }
+
+  /// Index of today's column within the visible range, or -1 when it is off
+  /// screen.
+  int _indexOfToday() {
+    for (var i = _first; i <= _last; i++) {
+      if (days[i].isToday) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   void _faint(Canvas canvas, double cx, double cy) {
@@ -279,5 +310,8 @@ class AttributeTablePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(AttributeTablePainter oldDelegate) =>
-      oldDelegate.days != days || oldDelegate.colors != colors;
+      oldDelegate.days != days ||
+      oldDelegate.colors != colors ||
+      oldDelegate.scroll != scroll ||
+      oldDelegate.viewportWidth != viewportWidth;
 }

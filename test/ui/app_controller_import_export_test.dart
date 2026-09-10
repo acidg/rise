@@ -1,10 +1,30 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rise/ble/thermometer_service.dart';
+import 'package:rise/data/day_entry_csv.dart';
 import 'package:rise/data/entry_repository.dart';
 import 'package:rise/data/paired_device_store.dart';
 import 'package:rise/domain/models/day_entry.dart';
 import 'package:rise/domain/models/signs.dart';
 import 'package:rise/ui/app_controller.dart';
+
+/// Counts how many times the store is written, so a batch import can be told
+/// from one write per entry.
+class CountingEntryRepository implements EntryRepository {
+  final InMemoryEntryRepository _entries = InMemoryEntryRepository();
+  int writes = 0;
+
+  @override
+  Future<List<DayEntry>> loadAll() => _entries.loadAll();
+
+  @override
+  Future<void> save(DayEntry entry) => saveAll([entry]);
+
+  @override
+  Future<void> saveAll(Iterable<DayEntry> entries) async {
+    writes++;
+    await _entries.saveAll(entries);
+  }
+}
 
 AppController _controller(List<DayEntry> seed) => AppController(
   repository: InMemoryEntryRepository(seed),
@@ -139,5 +159,25 @@ void main() {
 
     expect(csv, isNot(contains('AA:BB:CC')));
     expect(csv, isNot(contains('Ovy OT35')));
+  });
+
+  test('a long history is written to the store in a single batch', () async {
+    final repository = CountingEntryRepository();
+    final controller = AppController(
+      repository: repository,
+      thermometer: FakeThermometerService(),
+    );
+    await controller.load();
+    final csv = DayEntryCsv.encode([
+      for (var day = 1; day <= 60; day++)
+        DayEntry(date: DateTime(2026, 1, 1).add(Duration(days: day))),
+    ]);
+
+    final result = await controller.importCsv(csv);
+
+    expect(result.added, 60);
+    // One write, not one per day: rewriting the store per entry made importing
+    // years of history take minutes.
+    expect(repository.writes, 1);
   });
 }

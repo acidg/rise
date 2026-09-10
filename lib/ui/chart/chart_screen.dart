@@ -192,6 +192,12 @@ class _ChartScreenState extends State<ChartScreen> {
                 final graphHeight = (constraints.maxHeight - tableHeight)
                     .clamp(_minGraphHeight, double.infinity)
                     .toDouble();
+                // The columns are shown beside the frozen label gutter, so that
+                // is the width the painters treat as visible.
+                final chartWidth = (constraints.maxWidth - _gutterWidth).clamp(
+                  0.0,
+                  double.infinity,
+                );
 
                 // When the viewport is too short for the graph plus the table (a
                 // short landscape window), the whole chart scrolls vertically
@@ -231,6 +237,8 @@ class _ChartScreenState extends State<ChartScreen> {
                                     onSurface: onSurface,
                                     muted: muted,
                                     separator: theme.dividerColor,
+                                    scroll: _scroll,
+                                    viewportWidth: chartWidth,
                                   ),
                                 ),
                                 CustomPaint(
@@ -241,6 +249,8 @@ class _ChartScreenState extends State<ChartScreen> {
                                     onSurface: onSurface,
                                     muted: muted,
                                     separator: theme.dividerColor,
+                                    scroll: _scroll,
+                                    viewportWidth: chartWidth,
                                   ),
                                 ),
                               ],

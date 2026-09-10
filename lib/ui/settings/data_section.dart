@@ -23,11 +23,24 @@ class DataSection extends StatefulWidget {
   State<DataSection> createState() => _DataSectionState();
 }
 
+/// The long-running data task in progress, so the section can name what it is
+/// doing rather than just going quiet.
+enum _Task {
+  export('Exporting your history...'),
+  import('Importing your history...');
+
+  final String label;
+
+  const _Task(this.label);
+}
+
 class _DataSectionState extends State<DataSection> {
-  bool _busy = false;
+  _Task? _task;
+
+  bool get _busy => _task != null;
 
   Future<void> _export() async {
-    setState(() => _busy = true);
+    setState(() => _task = _Task.export);
     try {
       final csv = await widget.controller.exportCsv();
       final saved = await FlutterFileDialog.saveFile(
@@ -45,7 +58,7 @@ class _DataSectionState extends State<DataSection> {
       _showError('Export failed: $error');
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() => _task = null);
       }
     }
   }
@@ -60,7 +73,7 @@ class _DataSectionState extends State<DataSection> {
     if (file == null) {
       return;
     }
-    setState(() => _busy = true);
+    setState(() => _task = _Task.import);
     try {
       final csv = await file.readAsString();
       final result = await widget.controller.importCsv(
@@ -74,7 +87,7 @@ class _DataSectionState extends State<DataSection> {
       _showError('Import failed: $error');
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() => _task = null);
       }
     }
   }
@@ -173,7 +186,26 @@ class _DataSectionState extends State<DataSection> {
             ),
           ],
         ),
+        if (_task != null) _progress(context, _task!),
       ],
+    );
+  }
+
+  /// Names the running task and shows it is still working. A history of several
+  /// years takes a moment to read and fold in, and silence there reads as a
+  /// button that did nothing.
+  Widget _progress(BuildContext context, _Task task) {
+    return Padding(
+      key: const Key('data-progress'),
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(task.label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 8),
+          const LinearProgressIndicator(),
+        ],
+      ),
     );
   }
 }

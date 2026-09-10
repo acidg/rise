@@ -12,6 +12,11 @@ abstract interface class EntryRepository {
   /// Insert or replace the entry for its calendar date (the time of day is
   /// ignored), so editing a day updates it rather than duplicating it.
   Future<void> save(DayEntry entry);
+
+  /// Insert or replace many entries at once, keyed by date as [save] is.
+  /// Implementations persist the batch in a single write, so importing a long
+  /// history costs one store rewrite instead of one per day.
+  Future<void> saveAll(Iterable<DayEntry> entries);
 }
 
 /// Non-persistent [EntryRepository] backing the demo build and tests.
@@ -34,6 +39,13 @@ class InMemoryEntryRepository implements EntryRepository {
   @override
   Future<void> save(DayEntry entry) async {
     _byDate[_dateKey(entry.date)] = entry;
+  }
+
+  @override
+  Future<void> saveAll(Iterable<DayEntry> entries) async {
+    for (final entry in entries) {
+      _byDate[_dateKey(entry.date)] = entry;
+    }
   }
 
   static DateTime _dateKey(DateTime date) =>

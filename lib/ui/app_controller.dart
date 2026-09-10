@@ -274,21 +274,21 @@ class AppController extends ChangeNotifier {
         byDay[day] = measurement;
       }
     }
-    var changed = false;
+    final updated = <DayEntry>[];
     for (final MapEntry(key: day, value: measurement) in byDay.entries) {
       final base = existing[day] ?? DayEntry(date: day);
       if (!await _shouldApply(base, measurement, resolveConflict)) {
         continue;
       }
-      await repository.save(
+      updated.add(
         base.copyWith(
           temperature: measurement.celsius,
           temperatureAt: measurement.timestamp,
         ),
       );
-      changed = true;
     }
-    if (changed) {
+    if (updated.isNotEmpty) {
+      await repository.saveAll(updated);
       await load();
     }
   }
@@ -324,13 +324,16 @@ class AppController extends ChangeNotifier {
       for (final entry in await repository.loadAll())
         _dateKey(entry.date): entry,
     };
+    // Collected and written in one go: a history of several years would
+    // otherwise rewrite the whole store once per day it contains.
+    final toWrite = <DayEntry>[];
     var added = 0;
     var replaced = 0;
     var skipped = 0;
     for (final entry in incoming) {
       final stored = existing[_dateKey(entry.date)];
       if (stored == null) {
-        await repository.save(entry);
+        toWrite.add(entry);
         added++;
         continue;
       }
@@ -344,13 +347,14 @@ class AppController extends ChangeNotifier {
             EntryConflict(existing: stored, incoming: entry),
           );
       if (replace) {
-        await repository.save(entry);
+        toWrite.add(entry);
         replaced++;
       } else {
         skipped++;
       }
     }
-    if (added > 0 || replaced > 0) {
+    if (toWrite.isNotEmpty) {
+      await repository.saveAll(toWrite);
       await load();
     }
     return ImportResult(added: added, replaced: replaced, skipped: skipped);

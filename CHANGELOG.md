@@ -4,6 +4,24 @@ All notable changes to Rise are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Rise follows
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-10
+
+### Fixed
+
+- Importing a long history no longer takes minutes. Every imported day rewrote
+  the whole store, so a file covering years cost one full rewrite per day in it;
+  the import now writes the batch once. Syncing the thermometer writes once as
+  well.
+- The chart stayed responsive only on a short history: both the graph and the
+  attribute table drew every day of the record on each repaint, which on several
+  years of data meant a picture tens of thousands of pixels wide and a text
+  layout per day. Only the columns in view are drawn now.
+
+### Added
+
+- Import and export show what they are doing while they run, instead of leaving
+  the screen quiet long enough to look like the button did nothing.
+
 ## [1.1.0] - 2026-09-10
 
 ### Added
@@ -52,6 +70,7 @@ All notable changes to Rise are documented in this file. The format follows
 - CSV export and import of the whole history, so the data stays portable and
   the record is never locked into the app.
 
+[1.1.1]: https://github.com/acidg/rise/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/acidg/rise/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/acidg/rise/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/acidg/rise/releases/tag/v1.0.0

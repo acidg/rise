@@ -49,6 +49,36 @@ const List<String> _monthAbbr = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
+/// Columns kept on either side of the viewport, so a column scrolled halfway in
+/// is already drawn and the temperature line reaches its off-screen neighbour.
+const int _columnMargin = 2;
+
+/// The columns of [dayCount] that a viewport [viewportWidth] wide shows at
+/// [scrollOffset], widened by a small margin. Both painters record only these,
+/// because a multi-year history is tens of thousands of pixels wide: recording
+/// every column costs a text layout per day per repaint and a picture far larger
+/// than the screen.
+/// The chart's horizontal scroll offset, zero until the view is attached.
+double scrollOffset(ScrollController scroll) =>
+    scroll.hasClients ? scroll.offset : 0;
+
+({int first, int last}) visibleColumns(
+  int dayCount,
+  double scrollOffset,
+  double viewportWidth,
+) {
+  if (dayCount == 0) {
+    return (first: 0, last: -1);
+  }
+  final first = (scrollOffset / kColumnWidth).floor() - _columnMargin;
+  final last =
+      ((scrollOffset + viewportWidth) / kColumnWidth).ceil() + _columnMargin;
+  return (
+    first: first.clamp(0, dayCount - 1),
+    last: last.clamp(0, dayCount - 1),
+  );
+}
+
 /// Draws the temperature curve with the fertile window, ovulation, coverline,
 /// and the per-day header (date, cycle day, entry indicator). The other signs
 /// are drawn by the attribute table below. Horizontal: one column per day,
@@ -60,13 +90,27 @@ class GraphPainter extends CustomPainter {
   final Color muted;
   final Color separator;
 
+  /// The chart's horizontal scroll, both the repaint trigger and the source of
+  /// the visible range: only the columns on screen are drawn.
+  final ScrollController scroll;
+
+  /// Width of the chart's viewport, from the enclosing layout rather than the
+  /// canvas, which spans the whole history.
+  final double viewportWidth;
+
+  /// Columns currently on screen, set at the start of each paint.
+  int _first = 0;
+  int _last = -1;
+
   GraphPainter({
     required this.days,
     required this.colors,
     required this.onSurface,
     required this.muted,
     required this.separator,
-  });
+    required this.scroll,
+    required this.viewportWidth,
+  }) : super(repaint: scroll);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -75,6 +119,13 @@ class GraphPainter extends CustomPainter {
     if (plotBottom <= plotTop) {
       return;
     }
+    final range = visibleColumns(
+      days.length,
+      scrollOffset(scroll),
+      viewportWidth,
+    );
+    _first = range.first;
+    _last = range.last;
 
     _paintZebra(canvas, size);
     _paintFertileBands(canvas, plotTop, plotBottom);
@@ -98,9 +149,11 @@ class GraphPainter extends CustomPainter {
     final paint = Paint()
       ..color = colors.axis
       ..strokeWidth = 1;
+    final left = _first * kColumnWidth;
+    final right = (_last + 1) * kColumnWidth;
     for (final temperature in kChartGridTemperatures) {
       final y = _tempY(temperature, top, bottom);
-      canvas.drawLine(Offset(0, y), Offset(width, y), paint);
+      canvas.drawLine(Offset(left, y), Offset(right, y), paint);
     }
   }
 
@@ -111,7 +164,7 @@ class GraphPainter extends CustomPainter {
     final paint = Paint()
       ..color = separator
       ..strokeWidth = 1;
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       if (days[i].cycleDay != 1) {
         continue;
       }
@@ -123,7 +176,7 @@ class GraphPainter extends CustomPainter {
   /// Subtle alternating column tint (zebra) to make columns easier to follow.
   void _paintZebra(Canvas canvas, Size size) {
     final paint = Paint()..color = colors.columnAlt;
-    for (var i = 1; i < days.length; i += 2) {
+    for (var i = _first.isOdd ? _first : _first + 1; i <= _last; i += 2) {
       canvas.drawRect(
         Rect.fromLTWH(i * kColumnWidth, 0, kColumnWidth, size.height),
         paint,
@@ -133,7 +186,7 @@ class GraphPainter extends CustomPainter {
 
   void _paintFertileBands(Canvas canvas, double top, double bottom) {
     final solid = Paint()..color = colors.fertileFill;
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       final day = days[i];
       if (!day.fertile) {
         continue;
@@ -184,13 +237,20 @@ class GraphPainter extends CustomPainter {
     final lowPaint = Paint()
       ..color = colors.lowHigh
       ..strokeWidth = 1.5;
-    var i = 0;
-    while (i < days.length) {
+    var i = _first;
+    while (i <= _last) {
       final cover = days[i].coverline;
       final low = days[i].lowestHigherTemperature;
       if (cover == null || low == null) {
         i++;
         continue;
+      }
+      // A band may start off screen; walk back to its real start so the line and
+      // its label do not shift as the chart scrolls.
+      while (i > 0 &&
+          days[i - 1].coverline == cover &&
+          days[i - 1].lowestHigherTemperature == low) {
+        i--;
       }
       var j = i;
       while (j + 1 < days.length &&
@@ -228,7 +288,7 @@ class GraphPainter extends CustomPainter {
     final paint = Paint()
       ..color = colors.ovulation
       ..strokeWidth = 2;
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       final day = days[i];
       if (!day.isOvulation) {
         continue;
@@ -257,7 +317,7 @@ class GraphPainter extends CustomPainter {
     final todayFlags = <bool>[];
     final excluded = <Offset>[];
     Offset? previous;
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       final temperature = days[i].temperature;
       if (temperature == null) {
         previous = null;
@@ -305,7 +365,7 @@ class GraphPainter extends CustomPainter {
 
   /// Translucent tint over today's column, so today stands out.
   void _paintTodayTint(Canvas canvas, Size size) {
-    final index = days.indexWhere((d) => d.isToday);
+    final index = _indexOfToday();
     if (index < 0) {
       return;
     }
@@ -315,9 +375,20 @@ class GraphPainter extends CustomPainter {
     );
   }
 
+  /// Index of today's column within the visible range, or -1 when it is off
+  /// screen.
+  int _indexOfToday() {
+    for (var i = _first; i <= _last; i++) {
+      if (days[i].isToday) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   void _paintHeaders(Canvas canvas) {
     const cycleDayY = 27.0;
-    for (var i = 0; i < days.length; i++) {
+    for (var i = _first; i <= _last; i++) {
       final day = days[i];
       final centerX = _centerX(i);
       _text(
@@ -428,5 +499,8 @@ class GraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(GraphPainter oldDelegate) =>
-      oldDelegate.days != days || oldDelegate.colors != colors;
+      oldDelegate.days != days ||
+      oldDelegate.colors != colors ||
+      oldDelegate.scroll != scroll ||
+      oldDelegate.viewportWidth != viewportWidth;
 }
