@@ -142,6 +142,46 @@ class _ChartScreenState extends State<ChartScreen> {
     });
   }
 
+  /// Open the cycle list and, when a cycle is picked there, bring it into view.
+  Future<void> _openCycleList() async {
+    final start = await Navigator.of(context).push<DateTime>(
+      MaterialPageRoute<DateTime>(
+        builder: (_) => CycleListScreen(controller: widget.controller),
+      ),
+    );
+    if (start == null || !mounted) {
+      return;
+    }
+    _scrollToDay(start);
+  }
+
+  /// Scroll the chart so the column for [date] sits near the left edge, with a
+  /// couple of days of lead-in so the cycle is not flush against the gutter.
+  void _scrollToDay(DateTime date) {
+    if (!_scroll.hasClients) {
+      return;
+    }
+    final days = widget.controller.days;
+    final index = days.indexWhere(
+      (day) =>
+          day.date.year == date.year &&
+          day.date.month == date.month &&
+          day.date.day == date.day,
+    );
+    if (index < 0) {
+      return;
+    }
+    final target = (index * kColumnWidth - 2 * kColumnWidth).clamp(
+      0.0,
+      _scroll.position.maxScrollExtent,
+    );
+    _scroll.animateTo(
+      target,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -164,11 +204,7 @@ class _ChartScreenState extends State<ChartScreen> {
             key: const Key('cycles-action'),
             icon: const Icon(Icons.format_list_bulleted),
             tooltip: 'Cycles',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => CycleListScreen(controller: widget.controller),
-              ),
-            ),
+            onPressed: _openCycleList,
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),

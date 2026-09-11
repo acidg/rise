@@ -14,7 +14,8 @@ All notable changes to Rise are documented in this file. The format follows
   mucus added. Where the rules could say nothing it says what the record was
   missing - a rise with too few measurements before it to draw a coverline,
   measurement times spread across hours, no mucus logged - so the next cycle can
-  be recorded in a way the rules can use.
+  be recorded in a way the rules can use. Tapping a cycle closes the page and
+  scrolls the chart to its first day.
 - The chart marks where the record crosses into a new calendar year: a line
   through the full height, labelled with the year it opens. Scrolling back
   through several years of history no longer leaves the year a guess.

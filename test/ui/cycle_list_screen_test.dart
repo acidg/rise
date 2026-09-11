@@ -89,4 +89,49 @@ void main() {
     expect(find.textContaining('No mucus logged'), findsOneWidget);
     expect(find.textContaining('The window never closed'), findsOneWidget);
   });
+
+  testWidgets('tapping a cycle returns its first day to the caller', (
+    tester,
+  ) async {
+    final start = DateTime(2026, 1, 1);
+    final entries = [
+      for (var i = 0; i < 12; i++)
+        DayEntry(
+          date: start.add(Duration(days: i)),
+          temperature: i < 8 ? 36.40 : 36.75,
+          menstruation: i == 0 ? Menstruation.medium : Menstruation.none,
+        ),
+    ];
+    final controller = await controllerWith(entries);
+    tester.view.physicalSize = const Size(1000, 2200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    DateTime? picked;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildLightTheme(),
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () async {
+              picked = await Navigator.of(context).push<DateTime>(
+                MaterialPageRoute<DateTime>(
+                  builder: (_) => CycleListScreen(controller: controller),
+                ),
+              );
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cycle 1'));
+    await tester.pumpAndSettle();
+
+    expect(picked, DateTime(2026, 1, 1));
+  });
 }

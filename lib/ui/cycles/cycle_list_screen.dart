@@ -13,6 +13,9 @@ import 'cycle_sparkline.dart';
 ///
 /// The point is not the verdict but the reasoning behind it, so a gap in the
 /// data becomes something to act on rather than a silent "no evaluation".
+///
+/// Tapping a cycle closes the page and returns its first day, which the chart
+/// scrolls to.
 class CycleListScreen extends StatelessWidget {
   final AppController controller;
 
@@ -60,40 +63,47 @@ class _CycleCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cycle = analyzed.cycle;
     final notes = describeCycle(evaluateCycle(cycle, analyzed.window));
+    final subtitle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    cycle.hasKnownStart ? 'Cycle $number' : 'Before the record',
-                    style: theme.textTheme.titleMedium,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        // Tapping hands the cycle's first day back to the chart, which scrolls
+        // there: the list explains a cycle, the chart shows it day by day.
+        onTap: () => Navigator.of(context).pop(cycle.startDate),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      cycle.hasKnownStart
+                          ? 'Cycle $number'
+                          : 'Before the record',
+                      style: theme.textTheme.titleMedium,
+                    ),
                   ),
-                ),
-                Text(
-                  '${cycle.length} day${cycle.length == 1 ? '' : 's'}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  Text(
+                    '${cycle.length} day${cycle.length == 1 ? '' : 's'}',
+                    style: subtitle,
                   ),
-                ),
-              ],
-            ),
-            Text(
-              _dateRange(cycle.startDate, cycle.days.last.date),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            CycleSparkline(analyzed: analyzed),
-            const SizedBox(height: 12),
-            for (final note in notes) _NoteLine(note: note),
-          ],
+              Text(
+                _dateRange(cycle.startDate, cycle.days.last.date),
+                style: subtitle,
+              ),
+              const SizedBox(height: 10),
+              CycleSparkline(analyzed: analyzed),
+              const SizedBox(height: 12),
+              for (final note in notes) _NoteLine(note: note),
+            ],
+          ),
         ),
       ),
     );
