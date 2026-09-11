@@ -239,6 +239,7 @@ class _ChartScreenState extends State<ChartScreen> {
                                     separator: theme.dividerColor,
                                     scroll: _scroll,
                                     viewportWidth: chartWidth,
+                                    surface: theme.colorScheme.surface,
                                   ),
                                 ),
                                 CustomPaint(

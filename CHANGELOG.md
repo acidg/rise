@@ -4,6 +4,14 @@ All notable changes to Rise are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Rise follows
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The chart marks where the record crosses into a new calendar year: a line
+  through the full height, labelled with the year it opens. Scrolling back
+  through several years of history no longer leaves the year a guess.
+
 ## [1.1.1] - 2026-09-10
 
 ### Fixed

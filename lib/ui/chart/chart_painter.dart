@@ -49,6 +49,11 @@ const List<String> _monthAbbr = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
+/// Colour of the year boundary line and its label border: derived from the text
+/// colour so it reads as structure in both themes, and stronger than a cycle
+/// separator without competing with the curve.
+Color yearBoundaryColor(Color onSurface) => onSurface.withValues(alpha: 0.45);
+
 /// Columns kept on either side of the viewport, so a column scrolled halfway in
 /// is already drawn and the temperature line reaches its off-screen neighbour.
 const int _columnMargin = 2;
@@ -58,6 +63,12 @@ const int _columnMargin = 2;
 /// because a multi-year history is tens of thousands of pixels wide: recording
 /// every column costs a text layout per day per repaint and a picture far larger
 /// than the screen.
+/// Whether a column starting on [date] opens a calendar year the column before
+/// it, on [previous], did not belong to. The first column of the chart is not a
+/// change of year, so it is never a boundary.
+bool startsYear(DateTime date, DateTime? previous) =>
+    previous != null && date.year != previous.year;
+
 /// The chart's horizontal scroll offset, zero until the view is attached.
 double scrollOffset(ScrollController scroll) =>
     scroll.hasClients ? scroll.offset : 0;
@@ -98,6 +109,9 @@ class GraphPainter extends CustomPainter {
   /// canvas, which spans the whole history.
   final double viewportWidth;
 
+  /// Background behind the year label, so it stays readable over a fertile band.
+  final Color surface;
+
   /// Columns currently on screen, set at the start of each paint.
   int _first = 0;
   int _last = -1;
@@ -110,6 +124,7 @@ class GraphPainter extends CustomPainter {
     required this.separator,
     required this.scroll,
     required this.viewportWidth,
+    required this.surface,
   }) : super(repaint: scroll);
 
   @override
@@ -131,6 +146,7 @@ class GraphPainter extends CustomPainter {
     _paintFertileBands(canvas, plotTop, plotBottom);
     _paintGridlines(canvas, size.width, plotTop, plotBottom);
     _paintCycleSeparators(canvas, plotTop, size.height);
+    _paintYearBoundaries(canvas, plotTop, size.height);
     _paintReferenceLines(canvas, plotTop, plotBottom);
     _paintOvulation(canvas, plotTop, plotBottom);
     _paintTemperature(canvas, plotTop, plotBottom);
@@ -171,6 +187,47 @@ class GraphPainter extends CustomPainter {
       final x = i * kColumnWidth;
       canvas.drawLine(Offset(x, top), Offset(x, bottom), paint);
     }
+  }
+
+  /// Marks where the record crosses into a new calendar year: a line stronger
+  /// than the cycle separators, labelled with the year it opens. Only the
+  /// boundary is marked, so the label appears once per year rather than on every
+  /// column, and the day headers stay uncluttered.
+  void _paintYearBoundaries(Canvas canvas, double top, double bottom) {
+    final linePaint = Paint()
+      ..color = yearBoundaryColor(onSurface)
+      ..strokeWidth = 1.5;
+    for (var i = _first; i <= _last; i++) {
+      if (!startsYear(days[i].date, i > 0 ? days[i - 1].date : null)) {
+        continue;
+      }
+      final x = i * kColumnWidth;
+      canvas.drawLine(Offset(x, top), Offset(x, bottom), linePaint);
+      _yearLabel(canvas, days[i].date.year, x, top);
+    }
+  }
+
+  /// The year in a small filled chip beside its boundary line.
+  void _yearLabel(Canvas canvas, int year, double x, double top) {
+    final label = _layout('$year', 10, bold: true, color: onSurface);
+    final rect = Rect.fromLTWH(
+      x + 3,
+      top + 4,
+      label.width + 10,
+      label.height + 4,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+      Paint()..color = surface,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+      Paint()
+        ..color = yearBoundaryColor(onSurface)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    label.paint(canvas, Offset(rect.left + 5, rect.top + 2));
   }
 
   /// Subtle alternating column tint (zebra) to make columns easier to follow.
@@ -502,5 +559,6 @@ class GraphPainter extends CustomPainter {
       oldDelegate.days != days ||
       oldDelegate.colors != colors ||
       oldDelegate.scroll != scroll ||
-      oldDelegate.viewportWidth != viewportWidth;
+      oldDelegate.viewportWidth != viewportWidth ||
+      oldDelegate.surface != surface;
 }

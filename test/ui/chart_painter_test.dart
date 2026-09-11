@@ -23,4 +23,22 @@ void main() {
 
     expect(range.last, lessThan(range.first));
   });
+
+  test('a year boundary is the first column of a new calendar year', () {
+    expect(startsYear(DateTime(2026, 1, 1), DateTime(2025, 12, 31)), isTrue);
+    expect(startsYear(DateTime(2026, 1, 2), DateTime(2026, 1, 1)), isFalse);
+  });
+
+  test('the first column of the chart is not a year boundary', () {
+    expect(startsYear(DateTime(2026, 1, 1), null), isFalse);
+  });
+
+  test(
+    'a gap that skips new year still marks the first day recorded after it',
+    () {
+      // Calendar gaps are filled before the chart is built, but a record that
+      // resumes mid-January must still show where the year turned.
+      expect(startsYear(DateTime(2026, 1, 14), DateTime(2025, 11, 30)), isTrue);
+    },
+  );
 }

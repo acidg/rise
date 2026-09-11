@@ -117,6 +117,18 @@ class AttributeTablePainter extends CustomPainter {
       final x = i * kColumnWidth;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), separatorPaint);
     }
+    // Carry the year boundary down as well, so the marker runs the full height
+    // of the chart. The label itself is drawn once, in the graph above.
+    final yearPaint = Paint()
+      ..color = yearBoundaryColor(onSurface)
+      ..strokeWidth = 1.5;
+    for (var i = _first; i <= _last; i++) {
+      if (!startsYear(days[i].date, i > 0 ? days[i - 1].date : null)) {
+        continue;
+      }
+      final x = i * kColumnWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), yearPaint);
+    }
 
     for (var i = _first; i <= _last; i++) {
       if (days[i].isFuture) {
