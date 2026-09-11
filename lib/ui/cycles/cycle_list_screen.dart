@@ -14,6 +14,9 @@ import 'cycle_sparkline.dart';
 /// The point is not the verdict but the reasoning behind it, so a gap in the
 /// data becomes something to act on rather than a silent "no evaluation".
 ///
+/// Only the newest cycle starts unfolded; the rest show the verdict and how
+/// much advice waits behind the arrow, so years of history stay skimmable.
+///
 /// Tapping a cycle closes the page and returns its first day, which the chart
 /// scrolls to.
 class CycleListScreen extends StatelessWidget {
@@ -41,6 +44,7 @@ class CycleListScreen extends StatelessWidget {
             itemBuilder: (context, index) => _CycleCard(
               analyzed: ordered[index],
               number: cycles.length - index,
+              initiallyExpanded: index == 0,
             ),
           );
         },
@@ -49,20 +53,35 @@ class CycleListScreen extends StatelessWidget {
   }
 }
 
-class _CycleCard extends StatelessWidget {
+class _CycleCard extends StatefulWidget {
   final AnalyzedCycle analyzed;
 
   /// Position in the record, oldest cycle first, so the numbering does not shift
   /// as new cycles arrive.
   final int number;
 
-  const _CycleCard({required this.analyzed, required this.number});
+  /// Whether the account starts unfolded. Only the newest cycle does: it is the
+  /// one still open to act on, and 58 unfolded cycles are a wall of text.
+  final bool initiallyExpanded;
+
+  const _CycleCard({
+    required this.analyzed,
+    required this.number,
+    required this.initiallyExpanded,
+  });
+
+  @override
+  State<_CycleCard> createState() => _CycleCardState();
+}
+
+class _CycleCardState extends State<_CycleCard> {
+  late bool _expanded = widget.initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cycle = analyzed.cycle;
-    final notes = describeCycle(evaluateCycle(cycle, analyzed.window));
+    final cycle = widget.analyzed.cycle;
+    final notes = describeCycle(evaluateCycle(cycle, widget.analyzed.window));
     final subtitle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
@@ -83,7 +102,7 @@ class _CycleCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       cycle.hasKnownStart
-                          ? 'Cycle $number'
+                          ? 'Cycle ${widget.number}'
                           : 'Before the record',
                       style: theme.textTheme.titleMedium,
                     ),
@@ -92,6 +111,16 @@ class _CycleCard extends StatelessWidget {
                     '${cycle.length} day${cycle.length == 1 ? '' : 's'}',
                     style: subtitle,
                   ),
+                  IconButton(
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: _expanded
+                        ? 'Hide the reading'
+                        : 'Read how this cycle was evaluated',
+                    icon: Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                    ),
+                  ),
                 ],
               ),
               Text(
@@ -99,14 +128,44 @@ class _CycleCard extends StatelessWidget {
                 style: subtitle,
               ),
               const SizedBox(height: 10),
-              CycleSparkline(analyzed: analyzed),
+              CycleSparkline(analyzed: widget.analyzed),
               const SizedBox(height: 12),
-              for (final note in notes) _NoteLine(note: note),
+              AnimatedSize(
+                alignment: Alignment.topLeft,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final note in _visible(notes)) _NoteLine(note: note),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Folded away, a card keeps the verdict and says how much advice is waiting
+  /// behind the arrow, so a long record can be skimmed for the cycles worth
+  /// opening.
+  List<CycleNote> _visible(List<CycleNote> notes) {
+    if (_expanded) {
+      return notes;
+    }
+    final hints = notes.where((n) => n.tone == NoteTone.advice).length;
+    return [
+      notes.first,
+      if (hints > 0)
+        CycleNote(
+          NoteTone.advice,
+          hints == 1
+              ? 'One hint for recording this better.'
+              : '$hints hints for recording this better.',
+        ),
+    ];
   }
 
   String _dateRange(DateTime from, DateTime to) {

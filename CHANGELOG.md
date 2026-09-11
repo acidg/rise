@@ -4,6 +4,24 @@ All notable changes to Rise are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Rise follows
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The Cycles page turned into a blank grey block partway down a long record. A
+  cycle that ends before the calendar rules would have opened its window - four
+  days of bleeding, then bleeding again, while the five-day rule frees days 1 to
+  5 - was asked for the date of a day it never had, and the resulting error took
+  the whole list down with it. Such a cycle now says what happened: the window
+  would have opened on day 6, but the cycle ended on day 4.
+
+### Changed
+
+- Cycles in the list start folded, showing the verdict and how many hints wait
+  behind the arrow; only the newest cycle opens unfolded. Years of history were
+  otherwise an unbroken wall of text, since most of the account repeats from
+  cycle to cycle.
+
 ## [1.2.0] - 2026-09-11
 
 ### Added

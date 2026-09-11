@@ -30,4 +30,11 @@ class Cycle {
 
   /// The entry for a 1-based [cycleDay].
   DayEntry dayOfCycle(int cycleDay) => days[cycleDay - 1];
+
+  /// Date of a 1-based [cycleDay], counted from [startDate] rather than looked
+  /// up in [days]. The rules produce days the record does not reach - a window
+  /// that opens on day 6 of a cycle that lasted four, a predicted ovulation in a
+  /// cycle still running - and those days still have a date.
+  DateTime dateOfCycleDay(int cycleDay) =>
+      DateTime(startDate.year, startDate.month, startDate.day + cycleDay - 1);
 }

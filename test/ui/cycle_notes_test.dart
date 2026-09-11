@@ -57,6 +57,21 @@ void main() {
     expect(only(notes, 'No mucus logged'), isNotEmpty);
   });
 
+  test('a cycle that ends before its window opens says so', () {
+    // Bleeding that starts again after four days leaves a run shorter than the
+    // days the five-day rule frees, so the window opens past the last day.
+    final previous = buildCycle(temperatures: biphasic(lowDays: 8));
+    final short = buildCycle(temperatures: List.filled(4, null));
+    final windows = analyzer.analyze([previous, short]);
+    final notes = describeCycle(
+      evaluateCycle(short, windows.last),
+    ).map((n) => n.text).toList();
+
+    expect(only(notes, 'Window would have opened'), contains('day 6'));
+    expect(only(notes, 'The cycle ended'), contains('no fertile day'));
+    expect(notes.where((n) => n.contains('never closed')), isEmpty);
+  });
+
   test('an unevaluable window explains that no calendar rule applied', () {
     final previous = buildCycle(temperatures: List.filled(26, null));
     final current = buildCycle(

@@ -90,6 +90,33 @@ void main() {
     expect(find.textContaining('The window never closed'), findsOneWidget);
   });
 
+  testWidgets('older cycles stay folded until the arrow is tapped', (
+    tester,
+  ) async {
+    final start = DateTime(2026, 1, 1);
+    final entries = [
+      for (var i = 0; i < 24; i++)
+        DayEntry(
+          date: start.add(Duration(days: i)),
+          temperature: i < 8 ? 36.40 : 36.75,
+          menstruation: i == 0 || i == 12
+              ? Menstruation.medium
+              : Menstruation.none,
+        ),
+    ];
+    final controller = await controllerWith(entries);
+
+    await pumpScreen(tester, controller);
+
+    // The newest cycle is unfolded, the one before it is not.
+    expect(find.textContaining('five-day rule'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.expand_more).last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('five-day rule'), findsNWidgets(2));
+  });
+
   testWidgets('tapping a cycle returns its first day to the caller', (
     tester,
   ) async {

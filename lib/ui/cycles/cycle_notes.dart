@@ -42,7 +42,7 @@ String _plural(int count, String noun) =>
     count == 1 ? 'one $noun' : '$count ${noun}s';
 
 String _date(CycleEvaluation evaluation, int cycleDay) =>
-    formatDayMonth(evaluation.cycle.dayOfCycle(cycleDay).date);
+    formatDayMonth(evaluation.cycle.dateOfCycleDay(cycleDay));
 
 String _rise(CycleEvaluation evaluation) {
   final hundredths = evaluation.confirmingRiseHundredths!;
@@ -106,10 +106,25 @@ List<CycleNote> _windowNotes(CycleEvaluation evaluation) {
     ];
   }
 
+  // A cycle can end before the calendar rules would have opened its window:
+  // bleeding that starts again after a few days makes a run shorter than the
+  // days the five-day rule frees. Saying the window "never closed" would then
+  // describe days the cycle never had.
+  final endsBeforeWindow = window.firstFertileDay > evaluation.cycle.length;
   final notes = <CycleNote>[
-    CycleNote(NoteTone.step, _startSentence(evaluation)),
+    CycleNote(NoteTone.step, _startSentence(evaluation, endsBeforeWindow)),
   ];
-  if (window.confirmed) {
+  if (endsBeforeWindow) {
+    notes.add(
+      CycleNote(
+        NoteTone.step,
+        'The cycle ended on '
+        '${_date(evaluation, evaluation.cycle.length)}, on day '
+        '${evaluation.cycle.length}: bleeding began again before the window '
+        'would have opened, so no fertile day fell inside it.',
+      ),
+    );
+  } else if (window.confirmed) {
     notes.add(
       CycleNote(
         NoteTone.step,
@@ -131,8 +146,9 @@ List<CycleNote> _windowNotes(CycleEvaluation evaluation) {
   return notes;
 }
 
-String _startSentence(CycleEvaluation evaluation) {
+String _startSentence(CycleEvaluation evaluation, bool endsBeforeWindow) {
   final window = evaluation.window;
+  final opens = endsBeforeWindow ? 'Window would have opened' : 'Window opens';
   final rule = switch (window.calendarRule) {
     CalendarRule.minusEight =>
       'the minus-8 rule put the earliest fertile day on day '
@@ -147,11 +163,11 @@ String _startSentence(CycleEvaluation evaluation) {
   };
   final onset = evaluation.mucusOnsetDay;
   if (onset != null && onset < window.calendarStartDay) {
-    return 'Window opens ${_date(evaluation, window.firstFertileDay)} '
+    return '$opens ${_date(evaluation, window.firstFertileDay)} '
         '(day ${window.firstFertileDay}): $rule, and mucus was logged earlier, '
         'on day $onset.';
   }
-  return 'Window opens ${_date(evaluation, window.firstFertileDay)} '
+  return '$opens ${_date(evaluation, window.firstFertileDay)} '
       '(day ${window.firstFertileDay}): $rule.';
 }
 
