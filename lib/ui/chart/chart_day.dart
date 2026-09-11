@@ -14,6 +14,10 @@ class ChartDay {
   /// Whether ovulation is confirmed for this day's cycle.
   final bool confirmed;
 
+  /// Whether this day's window rests on no evaluation, so a fertile day is a
+  /// precaution rather than a finding and is drawn neutrally.
+  final bool unevaluated;
+
   /// Coverline (highest of the six low measurements) for this day, present only
   /// on the shift band of a confirmed cycle.
   final double? coverline;
@@ -35,6 +39,7 @@ class ChartDay {
     required this.fertile,
     required this.isOvulation,
     required this.confirmed,
+    this.unevaluated = false,
     required this.coverline,
     required this.lowestHigherTemperature,
     this.isFuture = false,

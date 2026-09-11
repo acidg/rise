@@ -1,5 +1,8 @@
-/// Fertility phase of the current day, for the title bar.
-enum CyclePhase { fertile, infertile }
+/// Fertility phase of the current day, for the title bar. [unevaluated] is not
+/// a phase of the cycle but the absence of one: too little was logged for either
+/// calendar rule, so the day is treated as fertile without that having been
+/// established.
+enum CyclePhase { fertile, infertile, unevaluated }
 
 /// A compact summary of the current cycle shown in the title bar: the current
 /// cycle day, the fertility phase, and the next expected event.

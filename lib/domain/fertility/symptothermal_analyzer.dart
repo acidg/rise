@@ -21,6 +21,13 @@ const int _fiveDayRuleFirstFertile = 6;
 /// Fallback cycle length when there is no history to average.
 const int _defaultCycleLength = 28;
 
+/// Cycle lengths the ovulation prediction averages over. A run far outside this
+/// range is a gap in the record rather than a cycle - bleeding that went
+/// unlogged leaves one long stretch - and averaging it in pushes the predicted
+/// ovulation days late for every cycle that follows.
+const int _minPlausibleCycleLength = 20;
+const int _maxPlausibleCycleLength = 45;
+
 /// Computes fertile windows from cycle history using the symptothermal method.
 abstract interface class FertilityAnalyzer {
   /// Analyze [cycles] (ordered oldest-first) and return one window per cycle in
@@ -139,11 +146,17 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
   }
 
   int _predictedOvulationDay(List<_CycleFacts> completed) {
-    if (completed.isEmpty) {
+    final lengths = [
+      for (final facts in completed)
+        if (facts.cycle.length >= _minPlausibleCycleLength &&
+            facts.cycle.length <= _maxPlausibleCycleLength)
+          facts.cycle.length,
+    ];
+    if (lengths.isEmpty) {
       return _defaultCycleLength - _lutealLength;
     }
-    final total = completed.fold<int>(0, (sum, f) => sum + f.cycle.length);
-    final average = (total / completed.length).round();
+    final total = lengths.fold<int>(0, (sum, length) => sum + length);
+    final average = (total / lengths.length).round();
     return average - _lutealLength;
   }
 
@@ -153,10 +166,10 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
     int? earliestFhm,
     int predictedOvulation,
   ) {
-    final calendarStart = _calendarStart(previous, earliestFhm);
+    final calendar = _calendarStart(previous, earliestFhm);
     final start = facts.mucusOnset == null
-        ? calendarStart
-        : min(calendarStart, facts.mucusOnset!);
+        ? calendar.day
+        : min(calendar.day, facts.mucusOnset!);
 
     final shift = facts.shift;
     if (shift == null) {
@@ -166,6 +179,7 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
         lastFertileDay: ovulation + 1,
         ovulationDay: ovulation,
         confirmed: false,
+        unevaluated: calendar.unevaluated,
       );
     }
 
@@ -184,13 +198,23 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
     );
   }
 
-  int _calendarStart(_CycleFacts? previous, int? earliestFhm) {
+  /// First fertile day from the calendar rules, and whether that day rests on an
+  /// evaluation at all. Without twelve documented cycles carrying a shift, and
+  /// without an evaluable previous cycle, the day is a fallback rather than a
+  /// finding.
+  ({int day, bool unevaluated}) _calendarStart(
+    _CycleFacts? previous,
+    int? earliestFhm,
+  ) {
     if (earliestFhm != null) {
-      return earliestFhm - _minus8Offset + 1;
+      return (day: earliestFhm - _minus8Offset + 1, unevaluated: false);
     }
     // Five-day rule while learning: trust day six only after an ovulatory cycle,
     // otherwise treat the whole cycle as potentially fertile.
     final previousOvulatory = previous == null || previous.isOvulatory;
-    return previousOvulatory ? _fiveDayRuleFirstFertile : 1;
+    if (previousOvulatory) {
+      return (day: _fiveDayRuleFirstFertile, unevaluated: false);
+    }
+    return (day: 1, unevaluated: true);
   }
 }

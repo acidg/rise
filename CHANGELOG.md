@@ -11,6 +11,31 @@ All notable changes to Rise are documented in this file. The format follows
 - The chart marks where the record crosses into a new calendar year: a line
   through the full height, labelled with the year it opens. Scrolling back
   through several years of history no longer leaves the year a guess.
+- A cycle whose window rests on no evaluation is now shown as such. When neither
+  calendar rule can be applied - no twelve documented cycles carrying a
+  temperature shift, and a previous cycle that could not be evaluated - the
+  whole cycle counts as fertile out of caution. That is a fallback, not a
+  finding, so the band is drawn in neutral grey instead of fertile green and the
+  status line reads "No evaluation possible" rather than "Fertile".
+
+### Changed
+
+- The first higher measurement must now clear the coverline by at least 0.05 C.
+  Sensiplan asks only that it lie above, by any amount, which let a reading two
+  hundredths up - inside the noise of a basal measurement - open the rise, date
+  ovulation a day early and close the fertile window two days early. The change
+  only ever delays a shift, never brings it forward.
+- The predicted ovulation day no longer averages in runs far outside a plausible
+  cycle length. A stretch where bleeding went unlogged is one long run, not a
+  cycle, and averaging it in pushed the prediction days late for every cycle
+  after it.
+
+### Fixed
+
+- A temperature rise of exactly 0.2 C over the coverline confirmed the shift a
+  day late: the threshold was compared in binary floating point, where
+  36.42 + 0.2 comes out just above 36.62. Temperatures are now compared in
+  hundredths, the precision they are recorded at.
 
 ## [1.1.1] - 2026-09-10
 

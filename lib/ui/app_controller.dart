@@ -437,6 +437,7 @@ class AppController extends ChangeNotifier {
             fertile: known && window.isFertile(cycleDay),
             isOvulation: known && cycleDay == window.ovulationDay,
             confirmed: known && window.confirmed,
+            unevaluated: known && window.unevaluated,
             coverline: onShiftBand ? window.coverline : null,
             lowestHigherTemperature: onShiftBand
                 ? window.lowestHigherTemperature
@@ -465,9 +466,7 @@ class AppController extends ChangeNotifier {
     }
     final day = current.cycle.length;
     final window = current.window;
-    final phase = window.isFertile(day)
-        ? CyclePhase.fertile
-        : CyclePhase.infertile;
+    final phase = _phaseFor(window, day);
 
     final String nextEvent;
     if (day < window.ovulationDay) {
@@ -479,6 +478,19 @@ class AppController extends ChangeNotifier {
           : 'Period due';
     }
     return CycleStatus(cycleDay: day, phase: phase, nextEvent: nextEvent);
+  }
+
+  /// A window that rests on no evaluation reports neither fertile nor
+  /// infertile: saying "fertile" would present a precaution as a finding, and
+  /// "infertile" would be plain wrong.
+  static CyclePhase _phaseFor(FertilityWindow window, int cycleDay) {
+    if (window.unevaluated) {
+      return CyclePhase.unevaluated;
+    }
+    if (window.isFertile(cycleDay)) {
+      return CyclePhase.fertile;
+    }
+    return CyclePhase.infertile;
   }
 
   static String _inDays(String event, int days) =>
@@ -504,6 +516,7 @@ class AppController extends ChangeNotifier {
           fertile: window.isFertile(cycleDay),
           isOvulation: cycleDay == window.ovulationDay,
           confirmed: window.confirmed,
+          unevaluated: window.unevaluated,
           coverline: null,
           lowestHigherTemperature: null,
           isFuture: true,

@@ -167,4 +167,76 @@ void main() {
       expect(disturbed.lastFertileDay, 10);
     },
   );
+
+  group('a window with nothing to evaluate', () {
+    test('is marked unevaluated when the previous cycle carried no rise', () {
+      // Neither rule applies: too few documented cycles for "minus 8", and a
+      // previous cycle without a temperature shift for the five-day rule.
+      final previous = buildCycle(temperatures: List.filled(26, null));
+      final current = buildCycle(
+        temperatures: List.filled(10, null),
+        isCurrent: true,
+      );
+
+      final windows = analyzer.analyze([previous, current]);
+
+      expect(windows.last.unevaluated, isTrue);
+      expect(windows.last.firstFertileDay, 1);
+    });
+
+    test('is not marked once the previous cycle is ovulatory', () {
+      final previous = buildCycle(temperatures: biphasic(lowDays: 12));
+      final current = buildCycle(
+        temperatures: List.filled(10, null),
+        isCurrent: true,
+      );
+
+      final windows = analyzer.analyze([previous, current]);
+
+      expect(windows.last.unevaluated, isFalse);
+      expect(windows.last.firstFertileDay, 6);
+    });
+
+    test('is not marked once this cycle confirms its own shift', () {
+      final previous = buildCycle(temperatures: List.filled(26, null));
+      final current = buildCycle(
+        temperatures: biphasic(lowDays: 12),
+        isCurrent: true,
+      );
+
+      final windows = analyzer.analyze([previous, current]);
+
+      expect(windows.last.unevaluated, isFalse);
+      expect(windows.last.confirmed, isTrue);
+    });
+  });
+
+  group('predicted ovulation', () {
+    test('averages the cycle lengths', () {
+      final cycles = [
+        for (var i = 0; i < 3; i++)
+          buildCycle(temperatures: List.filled(26, null)),
+        buildCycle(temperatures: List.filled(10, null), isCurrent: true),
+      ];
+
+      final window = analyzer.analyze(cycles).last;
+
+      expect(window.ovulationDay, 26 - 14);
+    });
+
+    test('leaves an implausibly long run out of the average', () {
+      // A stretch where bleeding went unlogged is one long run, not a cycle;
+      // averaging it in would push the prediction days late.
+      final cycles = [
+        for (var i = 0; i < 3; i++)
+          buildCycle(temperatures: List.filled(26, null)),
+        buildCycle(temperatures: List.filled(200, null)),
+        buildCycle(temperatures: List.filled(10, null), isCurrent: true),
+      ];
+
+      final window = analyzer.analyze(cycles).last;
+
+      expect(window.ovulationDay, 26 - 14);
+    });
+  });
 }

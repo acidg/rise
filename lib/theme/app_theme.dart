@@ -21,6 +21,11 @@ class ChartColors extends ThemeExtension<ChartColors> {
   final Color hatchBg;
   final Color hatchLine;
 
+  /// Background and line colours for a window that rests on no evaluation:
+  /// neutral rather than fertile-green, so caution is not read as a finding.
+  final Color unknownBg;
+  final Color unknownLine;
+
   /// Translucent tint highlighting today's column.
   final Color todayTint;
 
@@ -37,6 +42,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
     required this.columnAlt,
     required this.hatchBg,
     required this.hatchLine,
+    required this.unknownBg,
+    required this.unknownLine,
     required this.todayTint,
   });
 
@@ -54,6 +61,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
     Color? columnAlt,
     Color? hatchBg,
     Color? hatchLine,
+    Color? unknownBg,
+    Color? unknownLine,
     Color? todayTint,
   }) {
     return ChartColors(
@@ -69,6 +78,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
       columnAlt: columnAlt ?? this.columnAlt,
       hatchBg: hatchBg ?? this.hatchBg,
       hatchLine: hatchLine ?? this.hatchLine,
+      unknownBg: unknownBg ?? this.unknownBg,
+      unknownLine: unknownLine ?? this.unknownLine,
       todayTint: todayTint ?? this.todayTint,
     );
   }
@@ -91,6 +102,8 @@ class ChartColors extends ThemeExtension<ChartColors> {
       columnAlt: Color.lerp(columnAlt, other.columnAlt, t)!,
       hatchBg: Color.lerp(hatchBg, other.hatchBg, t)!,
       hatchLine: Color.lerp(hatchLine, other.hatchLine, t)!,
+      unknownBg: Color.lerp(unknownBg, other.unknownBg, t)!,
+      unknownLine: Color.lerp(unknownLine, other.unknownLine, t)!,
       todayTint: Color.lerp(todayTint, other.todayTint, t)!,
     );
   }
@@ -111,6 +124,8 @@ const ChartColors _lightChart = ChartColors(
   columnAlt: Color(0x08000000),
   hatchBg: Color(0xFFEEF9F5),
   hatchLine: Color(0xFF8FDCC9),
+  unknownBg: Color(0xFFF1F2F4),
+  unknownLine: Color(0xFFC3C9D2),
   todayTint: Color(0x143A7AFE),
 );
 
@@ -127,6 +142,8 @@ const ChartColors _darkChart = ChartColors(
   columnAlt: Color(0x0DFFFFFF),
   hatchBg: Color(0xFF12241F),
   hatchLine: Color(0xFF2F6B5E),
+  unknownBg: Color(0xFF1C1F24),
+  unknownLine: Color(0xFF464E59),
   todayTint: Color(0x265A90FF),
 );
 

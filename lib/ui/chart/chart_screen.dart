@@ -311,7 +311,11 @@ class _ChartScreenState extends State<ChartScreen> {
     if (!status.isKnown) {
       return 'No cycle detected';
     }
-    final phase = status.phase == CyclePhase.fertile ? 'Fertile' : 'Infertile';
+    final phase = switch (status.phase) {
+      CyclePhase.fertile => 'Fertile',
+      CyclePhase.unevaluated => 'No evaluation possible',
+      _ => 'Infertile',
+    };
     final next = status.nextEvent;
     return next == null ? phase : '$phase · $next';
   }

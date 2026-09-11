@@ -255,20 +255,24 @@ class GraphPainter extends CustomPainter {
         bottom,
       );
       // Confirmed cycles show a solid window; an unconfirmed cycle's window is a
-      // prediction, drawn hatched.
+      // prediction, drawn hatched. A window that rests on no evaluation is
+      // hatched in neutral grey instead, so it does not read as a fertile phase
+      // the data actually showed.
       if (day.confirmed) {
         canvas.drawRect(rect, solid);
+      } else if (day.unevaluated) {
+        _paintHatch(canvas, rect, colors.unknownBg, colors.unknownLine);
       } else {
-        _paintHatch(canvas, rect);
+        _paintHatch(canvas, rect, colors.hatchBg, colors.hatchLine);
       }
     }
   }
 
   /// Diagonal hatch fill for a predicted (unconfirmed) fertile day.
-  void _paintHatch(Canvas canvas, Rect rect) {
-    canvas.drawRect(rect, Paint()..color = colors.hatchBg);
+  void _paintHatch(Canvas canvas, Rect rect, Color background, Color line) {
+    canvas.drawRect(rect, Paint()..color = background);
     final linePaint = Paint()
-      ..color = colors.hatchLine
+      ..color = line
       ..strokeWidth = 1;
     canvas.save();
     canvas.clipRect(rect);
