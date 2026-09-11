@@ -20,14 +20,20 @@ All notable changes to Rise are documented in this file. The format follows
 
 ### Changed
 
-- The chart's upper reference line now rests on the third higher measurement
-  instead of the lowest of them, and so does the difference it labels. The third
-  is the value the rule tests: at least 0.2 C above the coverline confirms the
-  shift on its own day, less than that means a fourth measurement had to confirm
-  instead - which the label now shows, drawn in a dimmer green when the mark was
-  missed. The old line almost always landed on the first higher measurement, the
-  one that has just crossed the coverline, and reported a gap of a few
-  hundredths that said nothing about the rule.
+- The chart's upper reference line now rests on the measurement that completed
+  the temperature evaluation - the third higher one when it reached 0.2 C above
+  the coverline, otherwise the fourth that confirmed it instead - and so does the
+  difference it labels. The line therefore marks the day the temperature closed
+  the fertile window; it is drawn in a dimmer green when the evaluation finished
+  below the 0.2 mark. It used to rest on the lowest of the higher measurements,
+  which is almost always the first one, and reported a gap of a few hundredths
+  that said nothing about the rule.
+- The temperature evaluation now applies the method's second exception: a second
+  or third higher measurement that falls back onto or below the coverline is
+  disregarded rather than breaking the rise, and one further measurement is
+  awaited, which must reach 0.2 C above the coverline. Only one measurement may
+  be disregarded, and only from those two positions. Rise used to discard the
+  whole rise on any fall back, which is stricter than the method.
 - The first higher measurement must now clear the coverline by at least 0.05 C.
   Sensiplan asks only that it lie above, by any amount, which let a reading two
   hundredths up - inside the noise of a basal measurement - open the rise, date

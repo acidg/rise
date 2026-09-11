@@ -29,9 +29,9 @@ class FertilityWindow {
   /// Coverline temperature, present only when [confirmed].
   final double? coverline;
 
-  /// The third higher measurement, the value the "three over six" rule tests
-  /// against the coverline. Present only when [confirmed].
-  final double? thirdHigherTemperature;
+  /// The measurement that completed the temperature evaluation, the day the
+  /// shift closed the fertile window. Present only when [confirmed].
+  final double? confirmingTemperature;
 
   /// Whether the window rests on nothing but caution. True when neither calendar
   /// rule could be applied - no twelve documented cycles carrying a temperature
@@ -50,7 +50,7 @@ class FertilityWindow {
     this.open = false,
     this.shiftBandStartDay,
     this.coverline,
-    this.thirdHigherTemperature,
+    this.confirmingTemperature,
     this.unevaluated = false,
   });
 
@@ -64,7 +64,7 @@ class FertilityWindow {
       open = false,
       shiftBandStartDay = null,
       coverline = null,
-      thirdHigherTemperature = null,
+      confirmingTemperature = null,
       unevaluated = false;
 
   /// Whether [cycleDay] falls within the fertile window. An [open] window has no

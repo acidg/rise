@@ -47,19 +47,20 @@ class TemperatureShift {
   /// Highest of the six low measurements before the rise (the coverline).
   final double coverline;
 
-  /// The third higher measurement: the value the rule actually tests, since it
-  /// is the one that must reach [kShiftMinimumRise] above the coverline to
-  /// confirm the shift on its own day. The upper reference line rests on it, so
-  /// the gap drawn between the two lines is the gap the rule asks about - short
-  /// of the minimum rise means a fourth measurement had to confirm instead.
-  final double thirdHigherTemperature;
+  /// The measurement that completed the evaluation: the third higher one when it
+  /// reached [kShiftMinimumRise] above the coverline, otherwise the fourth that
+  /// confirmed it instead, or the further one awaited after a measurement was
+  /// disregarded. The upper reference line rests on it, so the line marks the
+  /// day the temperature closed the fertile window and the gap drawn is that
+  /// day's distance from the coverline.
+  final double confirmingTemperature;
 
   const TemperatureShift({
     required this.ovulationDay,
     required this.confirmationDay,
     required this.firstLowDay,
     required this.coverline,
-    required this.thirdHigherTemperature,
+    required this.confirmingTemperature,
   });
 }
 
@@ -136,9 +137,17 @@ bool _atLeast(double value, double threshold) =>
 }
 
 /// Walk forward from the first higher measurement collecting measured higher
-/// values, all of which must stay above [coverline], and apply the three- and
-/// four-over-six confirmation rules. Returns null when a measured value falls
-/// back to the coverline or the higher measurements run out before confirming.
+/// values and apply the confirmation rules. Returns null when the rise breaks or
+/// the measurements run out before confirming.
+///
+/// Two exceptions of the method apply here. A third measurement that stays below
+/// [kShiftMinimumRise] is confirmed instead by a fourth merely above the
+/// coverline. And a second or third measurement that falls back onto or below
+/// the coverline is disregarded rather than breaking the rise: it is not
+/// counted, one further measurement is awaited, and that one must reach the
+/// minimum rise - the fourth-day exception does not apply once a measurement has
+/// been disregarded. Only one may be disregarded, and only from the second or
+/// third position; a later fall back ends the rise.
 TemperatureShift? _confirmShift(
   List<double?> temperatures,
   int first,
@@ -147,17 +156,35 @@ TemperatureShift? _confirmShift(
 ) {
   final higherValues = <double>[temperatures[first]!];
   var lastIndex = first;
+  var disregarded = false;
   for (var i = first + 1; i < temperatures.length; i++) {
     final value = temperatures[i];
     if (value == null) {
       continue;
     }
     if (!(value > coverline)) {
-      return null;
+      if (disregarded || higherValues.length > 2) {
+        return null;
+      }
+      disregarded = true;
+      continue;
     }
     higherValues.add(value);
     lastIndex = i;
 
+    if (disregarded) {
+      if (higherValues.length >= _higherMeasurementCount &&
+          _atLeast(value, coverline + kShiftMinimumRise)) {
+        return _confirmed(
+          first,
+          lastIndex,
+          firstLowDay,
+          coverline,
+          higherValues,
+        );
+      }
+      continue;
+    }
     if (higherValues.length == _higherMeasurementCount) {
       if (_atLeast(value, coverline + kShiftMinimumRise)) {
         return _confirmed(
@@ -191,6 +218,6 @@ TemperatureShift _confirmed(
     confirmationDay: lastIndex + 1,
     firstLowDay: firstLowDay,
     coverline: coverline,
-    thirdHigherTemperature: higherValues[_higherMeasurementCount - 1],
+    confirmingTemperature: higherValues.last,
   );
 }

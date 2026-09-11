@@ -24,9 +24,9 @@ void main() {
         expect(shift.confirmationDay, 9); // third higher measurement
         expect(shift.firstLowDay, 1); // six unbroken lows begin on day one
         expect(shift.coverline, 36.40);
-        // The line rests on the third measurement (36.75), not on the lowest of
-        // the three: it is the value the 0.2 rule is about.
-        expect(shift.thirdHigherTemperature, 36.75);
+        // The third measurement completed the evaluation, so the line rests on
+        // it rather than on the lowest of the three.
+        expect(shift.confirmingTemperature, 36.75);
       },
     );
 
@@ -45,9 +45,9 @@ void main() {
         expect(shift, isNotNull);
         expect(shift!.ovulationDay, 6);
         expect(shift.confirmationDay, 10); // fourth measurement
-        // The reference line stays on the third measurement, the one the rule
-        // tests, so the gap it draws shows why a fourth was needed.
-        expect(shift.thirdHigherTemperature, 36.52);
+        // The fourth measurement is the one that completed the evaluation.
+
+        expect(shift.confirmingTemperature, 36.48);
       },
     );
 
@@ -108,21 +108,7 @@ void main() {
         // The third measured higher lands on cycle day ten, closing the window.
         expect(shift.confirmationDay, 10);
         expect(shift.coverline, 36.40);
-        expect(shift.thirdHigherTemperature, 36.70);
-      },
-    );
-
-    test(
-      'a measured value that falls back to the coverline breaks the rise',
-      () {
-        final temps = <double?>[
-          36.40, 36.40, 36.40, 36.40, 36.40, 36.40,
-          36.70,
-          36.40, // falls back to the coverline: not a sustained shift
-          36.70, 36.70,
-        ];
-
-        expect(detectTemperatureShift(temps), isNull);
+        expect(shift.confirmingTemperature, 36.70);
       },
     );
   });
@@ -139,7 +125,9 @@ void main() {
     expect(shift, isNotNull);
     expect(shift!.coverline, 36.74);
     expect(shift.ovulationDay, 7);
-    expect(shift.thirdHigherTemperature, 36.89);
+    // The third higher measurement (36.89) misses the minimum rise, so the
+    // fourth confirms and the line rests there.
+    expect(shift.confirmingTemperature, 37.09);
     // The third higher (36.89) misses the coverline by less than 0.2, so the
     // fourth confirms.
     expect(shift.confirmationDay, 11);
@@ -154,5 +142,51 @@ void main() {
     expect(shift, isNotNull);
     expect(shift!.ovulationDay, 6);
     expect(shift.coverline, 36.42);
+  });
+
+  group('a measurement that falls back to the coverline', () {
+    test('is disregarded when it is the second, and one more is awaited', () {
+      final shift = detectTemperatureShift([
+        36.40, 36.40, 36.40, 36.40, 36.40, 36.40, // coverline 36.40
+        36.50, // first higher
+        36.38, // falls below the line: disregarded, not counted
+        36.55, 36.62, // the awaited measurement reaches the minimum rise
+      ]);
+
+      expect(shift, isNotNull);
+      expect(shift!.ovulationDay, 6);
+      expect(shift.confirmationDay, 10);
+      expect(shift.confirmingTemperature, 36.62);
+    });
+
+    test('needs the awaited measurement to reach the minimum rise', () {
+      // Without the disregarded day a fourth measurement merely above the line
+      // would have confirmed; after one, the method asks for the full 0.2.
+      final shift = detectTemperatureShift([
+        36.40, 36.40, 36.40, 36.40, 36.40, 36.40, //
+        36.50, 36.40, 36.55, 36.52,
+      ]);
+
+      expect(shift, isNull);
+    });
+
+    test('ends the rise when it is the fourth measurement', () {
+      final shift = detectTemperatureShift([
+        36.40, 36.40, 36.40, 36.40, 36.40, 36.40, //
+        36.50, 36.55, 36.52, // three higher, none reaching the minimum rise
+        36.39, // the fourth falls back: too late to disregard
+      ]);
+
+      expect(shift, isNull);
+    });
+
+    test('ends the rise when a second measurement falls back', () {
+      final shift = detectTemperatureShift([
+        36.40, 36.40, 36.40, 36.40, 36.40, 36.40, //
+        36.50, 36.38, 36.55, 36.39, 36.62,
+      ]);
+
+      expect(shift, isNull);
+    });
   });
 }

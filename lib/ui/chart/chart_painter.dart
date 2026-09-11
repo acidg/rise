@@ -290,11 +290,11 @@ class GraphPainter extends CustomPainter {
   }
 
   /// Draws, per shift band, the coverline (highest of the six lows) and the
-  /// upper line for the third higher measurement, with the difference between
-  /// them labelled. That difference is what the rule tests: at least
-  /// [kShiftMinimumRise] confirms the shift on the third measurement, less than
-  /// that means a fourth had to confirm it, and the label is toned down to show
-  /// the mark was missed.
+  /// upper line for the measurement that completed the evaluation, with the
+  /// difference between them labelled. Reaching [kShiftMinimumRise] is what the
+  /// rule asks of the third measurement; a band confirmed below that mark was
+  /// closed by the fourth-day exception instead, and its line is toned down to
+  /// show it.
   void _paintReferenceLines(Canvas canvas, double top, double bottom) {
     final coverPaint = Paint()
       ..color = colors.coverline
@@ -302,8 +302,8 @@ class GraphPainter extends CustomPainter {
     var i = _first;
     while (i <= _last) {
       final cover = days[i].coverline;
-      final third = days[i].thirdHigherTemperature;
-      if (cover == null || third == null) {
+      final confirming = days[i].confirmingTemperature;
+      if (cover == null || confirming == null) {
         i++;
         continue;
       }
@@ -311,27 +311,27 @@ class GraphPainter extends CustomPainter {
       // its label do not shift as the chart scrolls.
       while (i > 0 &&
           days[i - 1].coverline == cover &&
-          days[i - 1].thirdHigherTemperature == third) {
+          days[i - 1].confirmingTemperature == confirming) {
         i--;
       }
       var j = i;
       while (j + 1 < days.length &&
           days[j + 1].coverline == cover &&
-          days[j + 1].thirdHigherTemperature == third) {
+          days[j + 1].confirmingTemperature == confirming) {
         j++;
       }
       // Compared in hundredths, the precision temperatures are recorded at, so a
       // rise of exactly the minimum is not lost to floating-point error.
-      final hundredths = ((third - cover) * 100).round();
+      final hundredths = ((confirming - cover) * 100).round();
       final reachedMinimumRise =
           hundredths >= (kShiftMinimumRise * 100).round();
-      final thirdPaint = Paint()
+      final confirmingPaint = Paint()
         ..color = reachedMinimumRise
             ? colors.lowHigh
             : colors.lowHigh.withValues(alpha: 0.55)
         ..strokeWidth = 1.5;
       final coverY = _tempY(cover, top, bottom);
-      final thirdY = _tempY(third, top, bottom);
+      final confirmingY = _tempY(confirming, top, bottom);
       final left = i * kColumnWidth;
       final right = (j + 1) * kColumnWidth;
       _dashedLine(
@@ -342,16 +342,16 @@ class GraphPainter extends CustomPainter {
       );
       _dashedLine(
         canvas,
-        Offset(left, thirdY),
-        Offset(right, thirdY),
-        thirdPaint,
+        Offset(left, confirmingY),
+        Offset(right, confirmingY),
+        confirmingPaint,
       );
       _text(
         canvas,
         '+${(hundredths / 100).toStringAsFixed(2)}',
         left + 2,
-        thirdY - 14,
-        thirdPaint.color,
+        confirmingY - 14,
+        confirmingPaint.color,
         10,
         bold: true,
         leftAlign: true,

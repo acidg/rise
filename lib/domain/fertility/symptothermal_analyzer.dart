@@ -199,7 +199,7 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
       confirmed: true,
       shiftBandStartDay: shift.firstLowDay,
       coverline: shift.coverline,
-      thirdHigherTemperature: shift.thirdHigherTemperature,
+      confirmingTemperature: shift.confirmingTemperature,
     );
   }
 

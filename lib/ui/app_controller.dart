@@ -439,8 +439,8 @@ class AppController extends ChangeNotifier {
             confirmed: known && window.confirmed,
             unevaluated: known && window.unevaluated,
             coverline: onShiftBand ? window.coverline : null,
-            thirdHigherTemperature: onShiftBand
-                ? window.thirdHigherTemperature
+            confirmingTemperature: onShiftBand
+                ? window.confirmingTemperature
                 : null,
             isToday: _dateKey(days[i].date) == today,
           ),
@@ -518,7 +518,7 @@ class AppController extends ChangeNotifier {
           confirmed: window.confirmed,
           unevaluated: window.unevaluated,
           coverline: null,
-          thirdHigherTemperature: null,
+          confirmingTemperature: null,
           isFuture: true,
         ),
     ];
