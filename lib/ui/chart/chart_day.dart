@@ -22,9 +22,10 @@ class ChartDay {
   /// on the shift band of a confirmed cycle.
   final double? coverline;
 
-  /// Lowest of the three higher measurements for this day, present only on the
-  /// shift band of a confirmed cycle. Drawn as the upper reference line.
-  final double? lowestHigherTemperature;
+  /// The third higher measurement for this day's cycle, present only on the
+  /// shift band of a confirmed cycle. Drawn as the upper reference line: the
+  /// value the rule checks against the coverline.
+  final double? thirdHigherTemperature;
 
   /// A predicted day past today, with no logged data. Not tappable.
   final bool isFuture;
@@ -41,7 +42,7 @@ class ChartDay {
     required this.confirmed,
     this.unevaluated = false,
     required this.coverline,
-    required this.lowestHigherTemperature,
+    required this.thirdHigherTemperature,
     this.isFuture = false,
     this.isToday = false,
   });

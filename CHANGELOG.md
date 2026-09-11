@@ -20,6 +20,14 @@ All notable changes to Rise are documented in this file. The format follows
 
 ### Changed
 
+- The chart's upper reference line now rests on the third higher measurement
+  instead of the lowest of them, and so does the difference it labels. The third
+  is the value the rule tests: at least 0.2 C above the coverline confirms the
+  shift on its own day, less than that means a fourth measurement had to confirm
+  instead - which the label now shows, drawn in a dimmer green when the mark was
+  missed. The old line almost always landed on the first higher measurement, the
+  one that has just crossed the coverline, and reported a gap of a few
+  hundredths that said nothing about the rule.
 - The first higher measurement must now clear the coverline by at least 0.05 C.
   Sensiplan asks only that it lie above, by any amount, which let a reading two
   hundredths up - inside the noise of a basal measurement - open the rise, date

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/fertility/temperature_shift.dart';
 import '../../theme/app_theme.dart';
 import 'chart_day.dart';
 
@@ -289,20 +290,20 @@ class GraphPainter extends CustomPainter {
   }
 
   /// Draws, per shift band, the coverline (highest of the six lows) and the
-  /// upper line for the lowest of the three higher measurements, with the
-  /// difference between them labelled.
+  /// upper line for the third higher measurement, with the difference between
+  /// them labelled. That difference is what the rule tests: at least
+  /// [kShiftMinimumRise] confirms the shift on the third measurement, less than
+  /// that means a fourth had to confirm it, and the label is toned down to show
+  /// the mark was missed.
   void _paintReferenceLines(Canvas canvas, double top, double bottom) {
     final coverPaint = Paint()
       ..color = colors.coverline
       ..strokeWidth = 1.5;
-    final lowPaint = Paint()
-      ..color = colors.lowHigh
-      ..strokeWidth = 1.5;
     var i = _first;
     while (i <= _last) {
       final cover = days[i].coverline;
-      final low = days[i].lowestHigherTemperature;
-      if (cover == null || low == null) {
+      final third = days[i].thirdHigherTemperature;
+      if (cover == null || third == null) {
         i++;
         continue;
       }
@@ -310,17 +311,27 @@ class GraphPainter extends CustomPainter {
       // its label do not shift as the chart scrolls.
       while (i > 0 &&
           days[i - 1].coverline == cover &&
-          days[i - 1].lowestHigherTemperature == low) {
+          days[i - 1].thirdHigherTemperature == third) {
         i--;
       }
       var j = i;
       while (j + 1 < days.length &&
           days[j + 1].coverline == cover &&
-          days[j + 1].lowestHigherTemperature == low) {
+          days[j + 1].thirdHigherTemperature == third) {
         j++;
       }
+      // Compared in hundredths, the precision temperatures are recorded at, so a
+      // rise of exactly the minimum is not lost to floating-point error.
+      final hundredths = ((third - cover) * 100).round();
+      final reachedMinimumRise =
+          hundredths >= (kShiftMinimumRise * 100).round();
+      final thirdPaint = Paint()
+        ..color = reachedMinimumRise
+            ? colors.lowHigh
+            : colors.lowHigh.withValues(alpha: 0.55)
+        ..strokeWidth = 1.5;
       final coverY = _tempY(cover, top, bottom);
-      final lowY = _tempY(low, top, bottom);
+      final thirdY = _tempY(third, top, bottom);
       final left = i * kColumnWidth;
       final right = (j + 1) * kColumnWidth;
       _dashedLine(
@@ -329,14 +340,18 @@ class GraphPainter extends CustomPainter {
         Offset(right, coverY),
         coverPaint,
       );
-      _dashedLine(canvas, Offset(left, lowY), Offset(right, lowY), lowPaint);
-      final diff = low - cover;
+      _dashedLine(
+        canvas,
+        Offset(left, thirdY),
+        Offset(right, thirdY),
+        thirdPaint,
+      );
       _text(
         canvas,
-        '+${diff.toStringAsFixed(2)}',
+        '+${(hundredths / 100).toStringAsFixed(2)}',
         left + 2,
-        lowY - 14,
-        colors.lowHigh,
+        thirdY - 14,
+        thirdPaint.color,
         10,
         bold: true,
         leftAlign: true,

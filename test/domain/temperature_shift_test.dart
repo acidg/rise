@@ -24,7 +24,9 @@ void main() {
         expect(shift.confirmationDay, 9); // third higher measurement
         expect(shift.firstLowDay, 1); // six unbroken lows begin on day one
         expect(shift.coverline, 36.40);
-        expect(shift.lowestHigherTemperature, 36.70);
+        // The line rests on the third measurement (36.75), not on the lowest of
+        // the three: it is the value the 0.2 rule is about.
+        expect(shift.thirdHigherTemperature, 36.75);
       },
     );
 
@@ -43,9 +45,9 @@ void main() {
         expect(shift, isNotNull);
         expect(shift!.ovulationDay, 6);
         expect(shift.confirmationDay, 10); // fourth measurement
-        // The fourth measurement confirms the shift, so it is part of the
-        // higher measurements: the lowest higher point must include it.
-        expect(shift.lowestHigherTemperature, 36.48);
+        // The reference line stays on the third measurement, the one the rule
+        // tests, so the gap it draws shows why a fourth was needed.
+        expect(shift.thirdHigherTemperature, 36.52);
       },
     );
 
@@ -106,7 +108,7 @@ void main() {
         // The third measured higher lands on cycle day ten, closing the window.
         expect(shift.confirmationDay, 10);
         expect(shift.coverline, 36.40);
-        expect(shift.lowestHigherTemperature, 36.70);
+        expect(shift.thirdHigherTemperature, 36.70);
       },
     );
 
@@ -137,7 +139,7 @@ void main() {
     expect(shift, isNotNull);
     expect(shift!.coverline, 36.74);
     expect(shift.ovulationDay, 7);
-    expect(shift.lowestHigherTemperature, 36.89);
+    expect(shift.thirdHigherTemperature, 36.89);
     // The third higher (36.89) misses the coverline by less than 0.2, so the
     // fourth confirms.
     expect(shift.confirmationDay, 11);

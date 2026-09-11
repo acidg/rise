@@ -47,17 +47,19 @@ class TemperatureShift {
   /// Highest of the six low measurements before the rise (the coverline).
   final double coverline;
 
-  /// Lowest of the higher measurements that confirm the shift - the three (or
-  /// four, under the exception) measurements above the coverline that close the
-  /// fertile window. The upper reference line rests on this point.
-  final double lowestHigherTemperature;
+  /// The third higher measurement: the value the rule actually tests, since it
+  /// is the one that must reach [kShiftMinimumRise] above the coverline to
+  /// confirm the shift on its own day. The upper reference line rests on it, so
+  /// the gap drawn between the two lines is the gap the rule asks about - short
+  /// of the minimum rise means a fourth measurement had to confirm instead.
+  final double thirdHigherTemperature;
 
   const TemperatureShift({
     required this.ovulationDay,
     required this.confirmationDay,
     required this.firstLowDay,
     required this.coverline,
-    required this.lowestHigherTemperature,
+    required this.thirdHigherTemperature,
   });
 }
 
@@ -189,6 +191,6 @@ TemperatureShift _confirmed(
     confirmationDay: lastIndex + 1,
     firstLowDay: firstLowDay,
     coverline: coverline,
-    lowestHigherTemperature: higherValues.reduce(min),
+    thirdHigherTemperature: higherValues[_higherMeasurementCount - 1],
   );
 }
