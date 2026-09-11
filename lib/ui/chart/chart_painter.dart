@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/fertility/temperature_shift.dart';
 import '../../theme/app_theme.dart';
+import '../date_format.dart';
 import 'chart_day.dart';
 
 /// Width of one day column. The chart and the attribute table share this unit
@@ -44,11 +45,6 @@ double _scaleTempToY(double temperature, double top, double bottom) {
   final fraction = (clamped - _tempMin) / (_tempMax - _tempMin);
   return bottom - fraction * (bottom - top);
 }
-
-const List<String> _monthAbbr = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 /// Colour of the year boundary line and its label border: derived from the text
 /// colour so it reads as structure in both themes, and stronger than a cycle
@@ -467,14 +463,7 @@ class GraphPainter extends CustomPainter {
     for (var i = _first; i <= _last; i++) {
       final day = days[i];
       final centerX = _centerX(i);
-      _text(
-        canvas,
-        '${day.date.day} ${_monthAbbr[day.date.month - 1]}',
-        centerX,
-        6,
-        muted,
-        9,
-      );
+      _text(canvas, formatDayMonth(day.date), centerX, 6, muted, 9);
       final cycleDayLabel = day.cycleDay?.toString() ?? '?';
       if (day.isToday) {
         // Today's cycle day sits in a filled pill so it stands out.

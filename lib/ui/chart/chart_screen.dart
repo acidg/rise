@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../app_controller.dart';
 import '../cycle_status.dart';
+import '../cycles/cycle_list_screen.dart';
 import '../detail/day_detail_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../temperature_conflict_dialog.dart';
@@ -158,6 +159,16 @@ class _ChartScreenState extends State<ChartScreen> {
           ListenableBuilder(
             listenable: widget.controller,
             builder: (context, _) => _syncAction(context),
+          ),
+          IconButton(
+            key: const Key('cycles-action'),
+            icon: const Icon(Icons.format_list_bulleted),
+            tooltip: 'Cycles',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CycleListScreen(controller: widget.controller),
+              ),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),

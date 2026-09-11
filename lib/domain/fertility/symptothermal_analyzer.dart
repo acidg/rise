@@ -187,7 +187,8 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
         ovulationDay: ovulation,
         confirmed: false,
         open: true,
-        unevaluated: calendar.unevaluated,
+        calendarRule: calendar.rule,
+        calendarStartDay: calendar.day,
       );
     }
 
@@ -197,6 +198,8 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
       lastFertileDay: end,
       ovulationDay: shift.ovulationDay,
       confirmed: true,
+      calendarRule: calendar.rule,
+      calendarStartDay: calendar.day,
       shiftBandStartDay: shift.firstLowDay,
       coverline: shift.coverline,
       confirmingTemperature: shift.confirmingTemperature,
@@ -207,19 +210,22 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
   /// evaluation at all. Without twelve documented cycles carrying a shift, and
   /// without an evaluable previous cycle, the day is a fallback rather than a
   /// finding.
-  ({int day, bool unevaluated}) _calendarStart(
+  ({int day, CalendarRule rule}) _calendarStart(
     _CycleFacts? previous,
     int? earliestFhm,
   ) {
     if (earliestFhm != null) {
-      return (day: earliestFhm - _minus8Offset + 1, unevaluated: false);
+      return (
+        day: earliestFhm - _minus8Offset + 1,
+        rule: CalendarRule.minusEight,
+      );
     }
     // Five-day rule while learning: trust day six only after an ovulatory cycle,
     // otherwise treat the whole cycle as potentially fertile.
     final previousOvulatory = previous == null || previous.isOvulatory;
     if (previousOvulatory) {
-      return (day: _fiveDayRuleFirstFertile, unevaluated: false);
+      return (day: _fiveDayRuleFirstFertile, rule: CalendarRule.fiveDay);
     }
-    return (day: 1, unevaluated: true);
+    return (day: 1, rule: CalendarRule.none);
   }
 }

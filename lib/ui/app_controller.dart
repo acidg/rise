@@ -109,6 +109,12 @@ class AppController extends ChangeNotifier {
   List<ChartDay> _days = const [];
   List<ChartDay> get days => _days;
 
+  List<AnalyzedCycle> _cycles = const [];
+
+  /// The analyzed cycles behind [days], oldest first. Drives the cycle list,
+  /// which explains how each one was evaluated.
+  List<AnalyzedCycle> get cycles => _cycles;
+
   DiscoveredThermometer? _pairedDevice;
   DiscoveredThermometer? get pairedDevice => _pairedDevice;
 
@@ -144,6 +150,7 @@ class AppController extends ChangeNotifier {
   Future<void> load() async {
     final entries = _throughToday(await repository.loadAll());
     final analyzed = analysis.analyze(entries);
+    _cycles = analyzed;
     _days = _buildChartDays(analyzed);
     _status = _computeStatus(analyzed);
     _pairedDevice = await pairedDeviceStore.load();

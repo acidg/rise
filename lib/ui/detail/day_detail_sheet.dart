@@ -3,12 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../domain/models/day_entry.dart';
 import '../../domain/models/signs.dart';
+import '../date_format.dart';
 import '../sign_labels.dart';
-
-const List<String> _monthAbbr = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 const double _defaultTemperature = 36.50;
 const double _temperatureStep = 0.01;
@@ -169,7 +165,7 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${date.day} ${_monthAbbr[date.month - 1]} ${date.year}',
+              formatDayMonthYear(date),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
