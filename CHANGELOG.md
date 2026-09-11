@@ -25,6 +25,11 @@ All notable changes to Rise are documented in this file. The format follows
   hundredths up - inside the noise of a basal measurement - open the rise, date
   ovulation a day early and close the fertile window two days early. The change
   only ever delays a shift, never brings it forward.
+- A fertile window without a confirmed temperature shift no longer closes at
+  all. Only the shift ends the fertile phase under the symptothermal method, so
+  a cycle that was never evaluated stays fertile from the calendar start to its
+  last day instead of closing on a prediction. The predicted closing day is
+  still what the chart draws ahead to.
 - The predicted ovulation day no longer averages in runs far outside a plausible
   cycle length. A stretch where bleeding went unlogged is one long run, not a
   cycle, and averaging it in pushed the prediction days late for every cycle

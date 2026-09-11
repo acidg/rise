@@ -4,8 +4,16 @@ class FertilityWindow {
   /// First fertile cycle day (inclusive).
   final int firstFertileDay;
 
-  /// Last fertile cycle day (inclusive).
+  /// Last fertile cycle day (inclusive) once the window has an end. While [open]
+  /// it is the day the window is predicted to close, used to decide how far
+  /// ahead to draw, not a bound on fertility.
   final int lastFertileDay;
+
+  /// Whether the window is still open, with no day yet ending it. True whenever
+  /// no temperature shift has been confirmed: only the shift closes the fertile
+  /// phase under the symptothermal method, so until one is evaluated every day
+  /// from [firstFertileDay] on counts as fertile, however late in the cycle.
+  final bool open;
 
   /// Estimated ovulation cycle day.
   final int ovulationDay;
@@ -38,6 +46,7 @@ class FertilityWindow {
     required this.lastFertileDay,
     required this.ovulationDay,
     required this.confirmed,
+    this.open = false,
     this.shiftBandStartDay,
     this.coverline,
     this.lowestHigherTemperature,
@@ -51,12 +60,15 @@ class FertilityWindow {
       lastFertileDay = 0,
       ovulationDay = 0,
       confirmed = false,
+      open = false,
       shiftBandStartDay = null,
       coverline = null,
       lowestHigherTemperature = null,
       unevaluated = false;
 
-  /// Whether [cycleDay] falls within the fertile window.
+  /// Whether [cycleDay] falls within the fertile window. An [open] window has no
+  /// upper bound: nothing has closed it, so every day from [firstFertileDay] on
+  /// is fertile.
   bool isFertile(int cycleDay) =>
-      cycleDay >= firstFertileDay && cycleDay <= lastFertileDay;
+      cycleDay >= firstFertileDay && (open || cycleDay <= lastFertileDay);
 }

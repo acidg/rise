@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rise/domain/fertility/fertility_window.dart';
 import 'package:rise/domain/fertility/symptothermal_analyzer.dart';
 import 'package:rise/domain/models/cycle.dart';
 import 'package:rise/domain/models/signs.dart';
@@ -261,5 +262,38 @@ void main() {
 
     expect(window.confirmed, isFalse);
     expect(window.lastFertileDay, 16);
+  });
+
+  group('a window with no confirmed shift', () {
+    test('stays open past the day it was predicted to close', () {
+      final cycle = buildCycle(temperatures: List.filled(30, null));
+
+      final window = analyzer.analyze([cycle]).single;
+
+      expect(window.open, isTrue);
+      expect(window.isFertile(window.lastFertileDay + 5), isTrue);
+      expect(window.isFertile(cycle.length), isTrue);
+      // The days before the window opens stay infertile.
+      expect(window.isFertile(window.firstFertileDay - 1), isFalse);
+    });
+
+    test('closes once the shift confirms it', () {
+      final cycle = buildCycle(temperatures: biphasic(lowDays: 12));
+
+      final window = analyzer.analyze([cycle]).single;
+
+      expect(window.open, isFalse);
+      expect(window.isFertile(window.lastFertileDay), isTrue);
+      expect(window.isFertile(window.lastFertileDay + 1), isFalse);
+    });
+
+    test('a run with no known cycle start has no fertile day at all', () {
+      // Days before the first bleeding onset: no cycle numbering, no window.
+      const window = FertilityWindow.none();
+
+      expect(window.open, isFalse);
+      expect(window.isFertile(1), isFalse);
+      expect(window.isFertile(40), isFalse);
+    });
   });
 }

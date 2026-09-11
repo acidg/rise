@@ -63,7 +63,8 @@ class _CycleFacts {
 /// calendar bound (the five-day rule while fewer than twelve cycles are
 /// documented, then the "minus 8" rule computed from the earliest first higher
 /// measurement of the most recent twelve completed cycles). End of fertility is
-/// the later of the temperature confirmation and the mucus peak plus three days.
+/// the later of the temperature confirmation and the mucus peak plus three days;
+/// with no confirmed shift nothing ends it and the window stays open.
 class SensiplanAnalyzer implements FertilityAnalyzer {
   const SensiplanAnalyzer();
 
@@ -175,15 +176,17 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
 
     final shift = facts.shift;
     if (shift == null) {
-      // Without a temperature evaluation the end is a calendar guess, but an
-      // observed sign outranks a guess: the window cannot close before three
-      // days after the mucus peak.
+      // Only the temperature shift closes the fertile phase, so without one the
+      // window stays open. The day computed here is where it is predicted to
+      // close - the later of the calendar guess and the mucus peak plus three -
+      // and says how far ahead to draw, not when fertility ends.
       final ovulation = max(1, predictedOvulation);
       return FertilityWindow(
         firstFertileDay: start,
         lastFertileDay: max(ovulation + 1, mucusEnd),
         ovulationDay: ovulation,
         confirmed: false,
+        open: true,
         unevaluated: calendar.unevaluated,
       );
     }
