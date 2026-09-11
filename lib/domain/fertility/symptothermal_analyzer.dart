@@ -171,21 +171,23 @@ class SensiplanAnalyzer implements FertilityAnalyzer {
         ? calendar.day
         : min(calendar.day, facts.mucusOnset!);
 
+    final mucusEnd = facts.mucusPeak == null ? 0 : facts.mucusPeak! + 3;
+
     final shift = facts.shift;
     if (shift == null) {
+      // Without a temperature evaluation the end is a calendar guess, but an
+      // observed sign outranks a guess: the window cannot close before three
+      // days after the mucus peak.
       final ovulation = max(1, predictedOvulation);
       return FertilityWindow(
         firstFertileDay: start,
-        lastFertileDay: ovulation + 1,
+        lastFertileDay: max(ovulation + 1, mucusEnd),
         ovulationDay: ovulation,
         confirmed: false,
         unevaluated: calendar.unevaluated,
       );
     }
 
-    final mucusEnd = facts.mucusPeak == null
-        ? shift.confirmationDay
-        : facts.mucusPeak! + 3;
     final end = max(shift.confirmationDay, mucusEnd);
     return FertilityWindow(
       firstFertileDay: start,

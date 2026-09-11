@@ -239,4 +239,27 @@ void main() {
       expect(window.ovulationDay, 26 - 14);
     });
   });
+
+  test('an unconfirmed window still honours the mucus peak', () {
+    // No temperature evaluation is possible (five measurements before the rise,
+    // one short of the six the rule needs), but egg-white mucus was logged on
+    // day 13, so the window cannot close before day 16 - least of all on the
+    // calendar guess, which lands earlier.
+    final cycle = buildCycle(
+      temperatures: [
+        null, null, null, null, null, null, null, null, null, //
+        36.69, 36.53, 36.63, 36.50, 36.62, 37.04, 37.11, 36.86, 37.09,
+      ],
+      mucus: {
+        11: CervicalMucus.sticky,
+        12: CervicalMucus.creamy,
+        13: CervicalMucus.eggWhite,
+      },
+    );
+
+    final window = analyzer.analyze([cycle]).single;
+
+    expect(window.confirmed, isFalse);
+    expect(window.lastFertileDay, 16);
+  });
 }
