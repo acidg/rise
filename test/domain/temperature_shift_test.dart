@@ -124,4 +124,33 @@ void main() {
       },
     );
   });
+
+  test('a reading barely above the lows does not open the rise', () {
+    // Six lows topping out at 36.72, then a 36.74 that clears them by two
+    // hundredths - inside measurement noise, so the rise starts on the 36.90
+    // that follows and the coverline rests on the 36.74 instead.
+    final shift = detectTemperatureShift([
+      36.72, 36.51, 36.72, 36.72, 36.50, 36.54, //
+      36.74, 36.90, 37.10, 36.89, 37.09,
+    ]);
+
+    expect(shift, isNotNull);
+    expect(shift!.coverline, 36.74);
+    expect(shift.ovulationDay, 7);
+    expect(shift.lowestHigherTemperature, 36.89);
+    // The third higher (36.89) misses the coverline by less than 0.2, so the
+    // fourth confirms.
+    expect(shift.confirmationDay, 11);
+  });
+
+  test('a clear first higher measurement still opens the rise', () {
+    final shift = detectTemperatureShift([
+      36.40, 36.42, 36.38, 36.41, 36.40, 36.39, //
+      36.50, 36.55, 36.62,
+    ]);
+
+    expect(shift, isNotNull);
+    expect(shift!.ovulationDay, 6);
+    expect(shift.coverline, 36.42);
+  });
 }
