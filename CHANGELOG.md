@@ -4,7 +4,7 @@ All notable changes to Rise are documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Rise follows
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.1] - 2026-09-12
 
 ### Fixed
 
@@ -154,6 +154,7 @@ All notable changes to Rise are documented in this file. The format follows
 - CSV export and import of the whole history, so the data stays portable and
   the record is never locked into the app.
 
+[1.2.1]: https://github.com/acidg/rise/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/acidg/rise/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/acidg/rise/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/acidg/rise/compare/v1.0.1...v1.1.0
