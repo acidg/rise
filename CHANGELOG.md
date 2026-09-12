@@ -78,11 +78,11 @@ All notable changes to Rise are documented in this file. The format follows
 ### Fixed
 
 - A fertile window without a temperature evaluation ignored the logged mucus and
-  closed on the calendar guess alone, which could fall days before the mucus
-  peak - in one March 2025 cycle the window closed on the very day egg-white
-  mucus was recorded. An observed sign now outranks the guess: such a window
-  cannot close before three days after the peak, the same bound a confirmed
-  window already respected.
+  closed on the calendar guess alone, which can fall days before the mucus peak -
+  ending the fertile phase while fertile-quality mucus is still being recorded.
+  An observed sign now outranks the guess: such a window cannot close before
+  three days after the peak, the same bound a confirmed window already
+  respected.
 - A temperature rise of exactly 0.2 C over the coverline confirmed the shift a
   day late: the threshold was compared in binary floating point, where
   36.42 + 0.2 comes out just above 36.62. Temperatures are now compared in
